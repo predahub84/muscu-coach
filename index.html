@@ -23,9 +23,9 @@
     } }
   };
 </script>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js" onerror="document.getElementById('root').innerHTML='<div style=&quot;padding:20px;color:#f87171;font-family:sans-serif&quot;>Erreur : impossible de charger React (unpkg.com bloqué ou hors-ligne). Vérifie ta connexion et recharge.</div>'"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" onerror="document.getElementById('root').innerHTML='<div style=&quot;padding:20px;color:#f87171;font-family:sans-serif&quot;>Erreur : impossible de charger React DOM. Vérifie ta connexion et recharge.</div>'"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js" onerror="document.getElementById('root').innerHTML='<div style=&quot;padding:20px;color:#f87171;font-family:sans-serif&quot;>Erreur : impossible de charger Babel. Vérifie ta connexion et recharge.</div>'"></script>
+<script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js" onerror="document.getElementById('root').innerHTML='<div style=&quot;padding:20px;color:#f87171;font-family:sans-serif&quot;>Erreur : impossible de charger React (jsdelivr bloqué ou hors-ligne). Vérifie ta connexion et recharge.</div>'"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js" onerror="document.getElementById('root').innerHTML='<div style=&quot;padding:20px;color:#f87171;font-family:sans-serif&quot;>Erreur : impossible de charger React DOM. Vérifie ta connexion et recharge.</div>'"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.5/babel.min.js" onerror="document.getElementById('root').innerHTML='<div style=&quot;padding:20px;color:#f87171;font-family:sans-serif&quot;>Erreur : impossible de charger Babel. Vérifie ta connexion et recharge.</div>'"></script>
 <style>
   * { -webkit-tap-highlight-color: transparent; }
   html, body, #root { height: 100%; }
@@ -52,7 +52,7 @@
   window.onerror = function(msg, url, line, col, err) {
     var root = document.getElementById('root');
     if (root) {
-      root.innerHTML = '<div style="padding:20px;color:#f87171;font-family:monospace;font-size:12px;white-space:pre-wrap;">Erreur JS : ' + msg + '\n(ligne ' + line + ', col ' + col + ')</div>';
+      root.innerHTML = '<div style="padding:20px;color:#f87171;font-family:monospace;font-size:12px;white-space:pre-wrap;">Erreur JS dans : ' + url + '\n' + msg + '\n(ligne ' + line + ', col ' + col + ')</div>';
     }
     return false;
   };
