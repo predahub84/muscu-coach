@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0b0d12" />
+<title>Muscu Coach — Prise de masse & Force</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: {
+      colors: {
+        bg: { DEFAULT: '#f5f6f8', dark: '#0b0d12' },
+        surface: { DEFAULT: '#ffffff', dark: '#141822' },
+        surface2: { DEFAULT: '#eef0f3', dark: '#1b202c' },
+        accent: { DEFAULT: '#ff5a36', light: '#ff8a63' },
+        force: '#5b8cff', hyper: '#ff5a36', deload: '#7c8291'
+      }
+    } }
+  };
+</script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { -webkit-tap-highlight-color: transparent; }
+  html, body, #root { height: 100%; }
+  body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; overscroll-behavior-y: none; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.4); border-radius: 9999px; }
+  .card { border-radius: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  .light .card { background:#fff; border:1px solid rgba(0,0,0,.06); }
+  .dark .card { background:#141822; border:1px solid rgba(255,255,255,.06); }
+  .light .card2 { background:#eef0f3; border:1px solid rgba(0,0,0,.06); border-radius:.75rem; }
+  .dark .card2 { background:#1b202c; border:1px solid rgba(255,255,255,.06); border-radius:.75rem; }
+  .btn { border-radius:.75rem; padding:.6rem 1rem; font-weight:600; font-size:.875rem; transition:transform .1s; user-select:none; }
+  .btn:active { transform: scale(0.96); }
+  .btn-primary { background:#ff5a36; color:#fff; }
+  .light .btn-ghost { background:#eef0f3; color:#334155; }
+  .dark .btn-ghost { background:#1b202c; color:#e2e8f0; }
+  .input { width:100%; border-radius:.5rem; padding:.5rem .75rem; font-size:.875rem; outline:none; }
+  .light .input { background:#fff; border:1px solid rgba(0,0,0,.12); color:#0f172a; }
+  .dark .input { background:#141822; border:1px solid rgba(255,255,255,.12); color:#f1f5f9; }
+  .label { font-size:.7rem; font-weight:600; color:#64748b; margin-bottom:.25rem; display:block; }
+  .pill { display:inline-flex; align-items:center; gap:.25rem; border-radius:9999px; padding:.25rem .6rem; font-size:.7rem; font-weight:700; }
+</style>
+</head>
+<body class="dark bg-bg dark:bg-bg-dark text-slate-900 dark:text-slate-100">
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, createContext, useContext, useCallback } = React;
+
+/* ============================================================================
+   DONNÉES — exercices, split, périodisation
+   ============================================================================ */
+
+const EXERCISES = [
+  { id:'developpe-couche', nom:'Développé couché', cat:'pectoraux', type:'barre', principal:true, inc:2.5 },
+  { id:'developpe-militaire', nom:'Développé militaire', cat:'epaules', type:'barre', principal:true, inc:2.5 },
+  { id:'tractions-lestees', nom:'Tractions lestées', cat:'dos', type:'poids-corps-leste', principal:true, inc:1.25 },
+  { id:'squat', nom:'Squat', cat:'quadriceps', type:'barre', principal:true, inc:2.5 },
+  { id:'hack-squat', nom:'Hack squat', cat:'quadriceps', type:'machine', principal:true, inc:5 },
+  { id:'souleve-terre-roumain', nom:'Soulevé de terre roumain', cat:'ischios-fessiers', type:'barre', principal:true, inc:2.5 },
+  { id:'rowing-lourd', nom:'Rowing lourd', cat:'dos', type:'barre', principal:true, inc:2.5 },
+  { id:'developpe-incline-halteres', nom:'Développé incliné haltères', cat:'pectoraux', type:'haltere', inc:2 },
+  { id:'chest-press', nom:'Chest press', cat:'pectoraux', type:'machine', inc:5 },
+  { id:'ecartes-poulie', nom:'Écartés poulie', cat:'pectoraux', type:'poulie', inc:2.5 },
+  { id:'elevations-laterales', nom:'Élévations latérales', cat:'epaules', type:'haltere', inc:1 },
+  { id:'reverse-pec-deck', nom:'Reverse pec deck', cat:'epaules', type:'machine', inc:5 },
+  { id:'developpe-incline-barre', nom:'Développé incliné', cat:'pectoraux', type:'barre', inc:2.5 },
+  { id:'developpe-couche-halteres', nom:'Développé couché haltères', cat:'pectoraux', type:'haltere', inc:2 },
+  { id:'chest-press-decl', nom:'Chest press déclinée / Dips', cat:'pectoraux', type:'machine', inc:2.5 },
+  { id:'ecartes-poulie-hb', nom:'Écartés poulie haute vers basse', cat:'pectoraux', type:'poulie', inc:2.5 },
+  { id:'elevations-lat-poulie', nom:'Élévations latérales poulie', cat:'epaules', type:'poulie', inc:1.25 },
+  { id:'presse', nom:'Presse à cuisses', cat:'quadriceps', type:'machine', inc:5 },
+  { id:'fentes-bulgares', nom:'Fentes bulgares', cat:'quadriceps', type:'haltere', inc:2 },
+  { id:'leg-extension', nom:'Leg extension', cat:'quadriceps', type:'machine', inc:5 },
+  { id:'leg-curl', nom:'Leg curl', cat:'ischios-fessiers', type:'machine', inc:5 },
+  { id:'mollets', nom:'Mollets', cat:'mollets', type:'machine', inc:5 },
+  { id:'abdos', nom:'Abdos', cat:'abdos', type:'poids-corps', inc:1 },
+  { id:'hip-thrust', nom:'Hip thrust', cat:'ischios-fessiers', type:'barre', inc:2.5 },
+  { id:'presse-pieds-hauts', nom:'Presse pieds hauts', cat:'ischios-fessiers', type:'machine', inc:5 },
+  { id:'adducteurs', nom:'Adducteurs', cat:'quadriceps', type:'machine', inc:5 },
+  { id:'abducteurs', nom:'Abducteurs', cat:'quadriceps', type:'machine', inc:5 },
+  { id:'rowing-poitrine', nom:'Rowing poitrine appuyée', cat:'dos', type:'machine', inc:5 },
+  { id:'tirage-vertical-neutre', nom:'Tirage vertical prise neutre', cat:'dos', type:'poulie', inc:2.5 },
+  { id:'rowing-unilateral-poulie', nom:'Rowing unilatéral poulie basse', cat:'dos', type:'poulie', inc:2.5 },
+  { id:'pullover-poulie', nom:'Pullover poulie', cat:'dos', type:'poulie', inc:2.5 },
+  { id:'curl-ez', nom:'Curl EZ', cat:'biceps', type:'barre', inc:2.5 },
+  { id:'extension-triceps', nom:'Extension triceps', cat:'triceps', type:'poulie', inc:1.25 },
+  { id:'curl-incline', nom:'Curl incliné', cat:'biceps', type:'haltere', inc:1 },
+  { id:'extension-tete', nom:'Extension triceps au-dessus de la tête', cat:'triceps', type:'haltere', inc:1 },
+  { id:'curl-poulie', nom:'Curl poulie', cat:'biceps', type:'poulie', inc:1.25 },
+  { id:'pushdown-corde', nom:'Pushdown corde', cat:'triceps', type:'poulie', inc:1.25 },
+  { id:'tirage-vertical', nom:'Tirage vertical', cat:'dos', type:'poulie', inc:2.5 },
+  { id:'rowing-machine', nom:'Rowing machine', cat:'dos', type:'machine', inc:5 },
+  { id:'rowing-unilateral', nom:'Rowing unilatéral', cat:'dos', type:'haltere', inc:2 },
+  { id:'pullover', nom:'Pullover', cat:'dos', type:'haltere', inc:2 },
+  { id:'reverse-fly', nom:'Reverse fly', cat:'epaules', type:'haltere', inc:1 },
+  { id:'curl-pupitre', nom:'Curl pupitre', cat:'biceps', type:'barre', inc:2.5 },
+  { id:'curl-marteau', nom:'Curl marteau', cat:'biceps', type:'haltere', inc:1 },
+  { id:'extension-unilaterale', nom:'Extension triceps unilatérale', cat:'triceps', type:'poulie', inc:1.25 }
+];
+const getEx = (id) => EXERCISES.find(e => e.id === id);
+const PRINCIPAUX = EXERCISES.filter(e => e.principal);
+
+const REMPLACEMENTS = {
+  'squat': ['leg-curl','leg-extension','hip-thrust','presse','adducteurs','abducteurs'],
+  'hack-squat': ['leg-curl','leg-extension','hip-thrust','presse','adducteurs','abducteurs'],
+  'fentes-bulgares': ['leg-curl','leg-extension','hip-thrust','adducteurs','abducteurs']
+};
+
+const SPLIT = [
+  { jour:'lundi', nom:'Pectoraux + épaules A', focus:'lourd / tension', exos:[
+    {id:'developpe-couche',p:true},{id:'developpe-incline-halteres'},{id:'chest-press'},{id:'ecartes-poulie'},
+    {id:'developpe-militaire',p:true},{id:'elevations-laterales'},{id:'reverse-pec-deck'}
+  ]},
+  { jour:'mardi', nom:'Jambes A', focus:'quadriceps / lourd', exos:[
+    {id:'squat',p:true},{id:'presse'},{id:'fentes-bulgares'},{id:'leg-extension'},{id:'leg-curl'},{id:'mollets'},{id:'abdos'}
+  ]},
+  { jour:'mercredi', nom:'Dos + biceps / triceps A', focus:'lourd / tension', exos:[
+    {id:'tractions-lestees',p:true},{id:'rowing-poitrine'},{id:'tirage-vertical-neutre'},{id:'rowing-unilateral-poulie'},{id:'pullover-poulie'},
+    {id:'curl-ez'},{id:'extension-triceps'},{id:'curl-incline'},{id:'extension-tete'},{id:'curl-poulie'},{id:'pushdown-corde'}
+  ]},
+  { jour:'jeudi', nom:'Pectoraux + épaules B', focus:'volume / congestion', exos:[
+    {id:'developpe-incline-barre'},{id:'developpe-couche-halteres'},{id:'chest-press-decl'},{id:'ecartes-poulie-hb'},
+    {id:'elevations-laterales'},{id:'elevations-lat-poulie'},{id:'reverse-pec-deck'}
+  ]},
+  { jour:'vendredi', nom:'Jambes B', focus:'chaîne postérieure / volume', exos:[
+    {id:'souleve-terre-roumain',p:true},{id:'hack-squat',p:true},{id:'hip-thrust'},{id:'leg-curl'},{id:'presse-pieds-hauts'},{id:'leg-extension'},{id:'mollets'}
+  ]},
+  { jour:'samedi', nom:'Dos + biceps / triceps B', focus:'volume / congestion', exos:[
+    {id:'rowing-lourd',p:true},{id:'tirage-vertical'},{id:'rowing-machine'},{id:'rowing-unilateral'},{id:'pullover'},{id:'reverse-fly'},
+    {id:'curl-pupitre'},{id:'extension-triceps'},{id:'curl-marteau'},{id:'pushdown-corde'},{id:'curl-poulie'},{id:'extension-unilaterale'}
+  ]},
+  { jour:'dimanche', nom:'Repos', focus:'récupération', exos:[] }
+];
+const getJour = (j) => SPLIT.find(s => s.jour === j);
+const JOURS_ORDRE = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'];
+const JOURS_JS = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+
+const BLOCKS = [
+  { d:0, f:0, phase:'calibration', nom:'Semaine 0 — Calibration', desc:'Tests / recherche des charges de départ sur les mouvements principaux.' },
+  { d:1, f:4, phase:'hypertrophie-fondamentale', nom:'Hypertrophie fondamentale', desc:'Séries classiques, double progression, peu d’intensification.', rir:[3,2,1.5,1] },
+  { d:5, f:5, phase:'deload', nom:'Deload', desc:'Volume et intensité réduits pour récupérer avant le bloc force.' },
+  { d:6, f:9, phase:'force', nom:'Force', desc:'Charges recalculées depuis le dernier e1RM. Provisoires jusqu’au recalibrage.' },
+  { d:10, f:10, phase:'recalibrage', nom:'Deload + recalibrage', desc:'Deload + mini-tests pour recalculer le e1RM.' },
+  { d:11, f:14, phase:'hypertrophie-lourde', nom:'Hypertrophie lourde', desc:'Structures top-set + back-off calculées automatiquement.', rir:[2,1.5,1,1] },
+  { d:15, f:15, phase:'deload', nom:'Deload', desc:'Volume et intensité réduits avant le bloc final.' },
+  { d:16, f:19, phase:'volume-congestion', nom:'Volume / congestion / intensification', desc:'Dropset, rest-pause, myo-reps.', rir:[2,1.5,1,1] },
+  { d:20, f:20, phase:'recalibrage', nom:'Deload + nouveaux tests', desc:'Fin de cycle : deload + nouvelle batterie de tests.' }
+];
+const PHASE_LABEL = { 'calibration':'Calibration','hypertrophie-fondamentale':'Hypertrophie fondamentale','deload':'Deload','force':'Force','recalibrage':'Recalibrage','hypertrophie-lourde':'Hypertrophie lourde','volume-congestion':'Volume / congestion' };
+const PHASE_COLOR = { 'calibration':'bg-slate-400','hypertrophie-fondamentale':'bg-hyper/90','deload':'bg-deload','force':'bg-force','recalibrage':'bg-deload','hypertrophie-lourde':'bg-hyper','volume-congestion':'bg-accent' };
+
+function getBlock(semaine) {
+  const b = BLOCKS.find(b => semaine >= b.d && semaine <= b.f);
+  if (b) return b;
+  return getBlock(((semaine - 21) % 21));
+}
+function weekIndexInBlock(semaine, bloc) { return semaine - bloc.d; }
+function computeCurrentWeek(dateDebutISO) {
+  const debut = new Date(dateDebutISO);
+  const ms = 7 * 24 * 60 * 60 * 1000;
+  return Math.max(0, Math.floor((Date.now() - debut.getTime()) / ms));
+}
+
+/* ============================================================================
+   CALCULS — e1RM, arrondis, historique
+   ============================================================================ */
+
+function calcE1RM(charge, reps) {
+  if (reps <= 0 || charge <= 0) return 0;
+  if (reps === 1) return charge;
+  return Math.round(charge * (1 + reps / 30) * 100) / 100;
+}
+const PALIERS = [70,75,80,82.5,85,87.5,90,92.5,95];
+function calcPaliers(e1rm) { return PALIERS.map(p => ({ p, charge: Math.round(e1rm * (p/100) * 100)/100 })); }
+function arrondir(charge, inc) {
+  if (inc <= 0) return Math.round(charge*100)/100;
+  const paliers = charge / inc;
+  const bas = Math.floor(paliers);
+  const reste = paliers - bas;
+  return Math.round((reste > 0.9 ? bas+1 : bas) * inc * 100) / 100;
+}
+function dernierTest(exId, tests) {
+  return tests.filter(t => t.exId === exId).sort((a,b) => new Date(b.date)-new Date(a.date))[0];
+}
+function e1rmRef(exId, tests) { const t = dernierTest(exId, tests); return t ? t.e1rm : 0; }
+
+function historique(exId, tests, logs) {
+  let e1rmMax=0, e1rmMaxDate='', meilleurCharge=0, meilleurChargeDate='';
+  const records = {};
+  const consider = (charge, reps, date) => {
+    if (charge > meilleurCharge) { meilleurCharge = charge; meilleurChargeDate = date; }
+    const e1 = calcE1RM(charge, reps);
+    if (e1 > e1rmMax) { e1rmMax = e1; e1rmMaxDate = date; }
+    [3,5,8,10,12].forEach(r => { if (reps <= r) { const ex = records[r]; if (!ex || charge > ex.charge) records[r] = { reps, charge, date }; } });
+  };
+  tests.filter(t=>t.exId===exId).forEach(t => consider(t.chargeTotale, t.reps, t.date));
+  logs.forEach(l => { const ex = l.exos.find(e=>e.exId===exId); if (!ex) return;
+    ex.sets.forEach(s => { if (s.chargeR>0 && s.repsR>0) consider(s.chargeR, s.repsR, l.date); }); });
+  return { e1rmMax, e1rmMaxDate, meilleurCharge, meilleurChargeDate, records };
+}
+
+/* ============================================================================
+   MOTEUR DE PRESCRIPTION — génère les séries de la séance selon la phase
+   ============================================================================ */
+
+const REPOS = { forceLourd:210, hyper:150, isolation:75, restPause:20 };
+
+function rirHyper(wi) { const t=[3,2,1.5,1]; return t[Math.min(wi,t.length-1)]; }
+
+function setsForce(wi, e1rm, inc) {
+  const paliers = [ {n:4,r:5,pm:78.5}, {n:5,r:4,pm:81.5}, {n:5,r:3,pm:85.5}, {n:3,r:3,pm:88.5} ];
+  const p = paliers[Math.min(wi, paliers.length-1)];
+  if (wi===3) {
+    const top = arrondir(e1rm*(p.pm/100), inc), backoff = arrondir(e1rm*((p.pm-10)/100), inc);
+    return [
+      {n:1,rmin:3,rmax:3,rir:1,pct:p.pm,methode:'aucune',repos:REPOS.forceLourd,note:`Top set ~${top}kg`},
+      {n:2,rmin:3,rmax:4,rir:2,pct:p.pm-10,methode:'aucune',repos:REPOS.forceLourd,note:`Back-off ~${backoff}kg`},
+      {n:3,rmin:3,rmax:4,rir:2,pct:p.pm-10,methode:'aucune',repos:REPOS.forceLourd}
+    ];
+  }
+  return Array.from({length:p.n},(_,i)=>({n:i+1,rmin:p.r,rmax:p.r+1,rir:2,pct:p.pm,methode:'aucune',repos:REPOS.forceLourd}));
+}
+function setsHyperLourde() {
+  return [
+    {n:1,rmin:6,rmax:6,rir:1,methode:'aucune',repos:REPOS.hyper,note:'Charge lourde'},
+    {n:2,rmin:5,rmax:6,rir:1,methode:'aucune',repos:REPOS.hyper,note:'Même charge'},
+    {n:3,rmin:8,rmax:10,rir:1,methode:'aucune',repos:REPOS.hyper,note:'-10% de la série 1'},
+    {n:4,rmin:10,rmax:12,rir:0,methode:'aucune',repos:REPOS.isolation,note:'-5 à -8% supplémentaires'}
+  ];
+}
+function setsHyperFond(wi) {
+  const rir = rirHyper(wi);
+  return [1,2,3].map(n => ({n,rmin:8,rmax:10,rir,methode:'aucune',repos:REPOS.hyper}));
+}
+function setsVolumeCongestion(wi, isolation, derniere) {
+  const rir = rirHyper(wi);
+  const sets = [
+    {n:1,rmin:10,rmax:12,rir,methode:'aucune',repos: isolation?REPOS.isolation:REPOS.hyper},
+    {n:2,rmin:10,rmax:12,rir,methode:'aucune',repos: isolation?REPOS.isolation:REPOS.hyper}
+  ];
+  if (derniere) {
+    const methode = isolation ? 'myo-reps' : 'dropset';
+    sets.push({n:3,rmin:8,rmax:15,rir:0,methode,repos: methode==='myo-reps'?REPOS.restPause:REPOS.hyper,
+      note: methode==='dropset' ? 'Dropset : -20 à -25% après l’échec, sans repos' : 'Myo-reps : activation RIR1 puis mini-séries 3-5 reps, 15-20s repos'});
+  } else sets.push({n:3,rmin:10,rmax:12,rir,methode:'aucune',repos: isolation?REPOS.isolation:REPOS.hyper});
+  return sets;
+}
+function genererSets(exId, principal, phase, wi, tests, derniere) {
+  const ex = getEx(exId); const inc = ex ? ex.inc : 2.5;
+  switch(phase) {
+    case 'force': {
+      if (!principal) return setsHyperFond(2);
+      const e1 = e1rmRef(exId, tests);
+      return e1 ? setsForce(wi, e1, inc) : setsHyperFond(2);
+    }
+    case 'hypertrophie-lourde': return setsHyperLourde();
+    case 'volume-congestion': return setsVolumeCongestion(wi, !principal, derniere);
+    case 'deload': return [{n:1,rmin:10,rmax:12,rir:4,methode:'aucune',repos:REPOS.isolation},{n:2,rmin:10,rmax:12,rir:4,methode:'aucune',repos:REPOS.isolation}];
+    case 'recalibrage': case 'calibration': return [];
+    default: return setsHyperFond(wi);
+  }
+}
+function construireSeance(jour, semaine, tests, desactives, remplacements) {
+  const jp = getJour(jour);
+  if (!jp || jp.exos.length===0) return null;
+  const bloc = getBlock(semaine); const wi = weekIndexInBlock(semaine, bloc);
+  const dernierIdx = jp.exos.length - 1;
+  const exercices = jp.exos.map((e,idx) => {
+    const idEff = desactives.includes(e.id) ? (remplacements[e.id] || e.id) : e.id;
+    return { exId: idEff, sets: genererSets(idEff, !!e.p, bloc.phase, wi, tests, idx===dernierIdx) };
+  });
+  return { jour: jp.jour, nom: jp.nom, focus: jp.focus, exercices };
+}
+
+/* ============================================================================
+   MOTEUR DE PROGRESSION
+   ============================================================================ */
+
+function recoHyper(sets, ex) {
+  if (!sets.length) return { charge:0, dir:'maintien', raison:'Aucune série.' };
+  const last = sets[sets.length-1].chargeR, rmax = sets[0].rmax, rmin = sets[0].rmin, rirP = sets[0].rirP;
+  const auTop = sets.every(s => s.repsR >= rmax && s.rirR >= rirP - 0.5);
+  const dansFourchette = sets.every(s => s.repsR >= rmin);
+  const echec = sets.some(s => s.repsR < rmin - 2 || s.rirR <= 0);
+  if (auTop) return { charge: arrondir(last+ex.inc, ex.inc), dir:'hausse', raison:`Toutes les séries ont atteint ${rmax} reps avec RIR ≥ ${rirP} : on augmente.` };
+  if (echec) return { charge: Math.max(arrondir(last-ex.inc, ex.inc),0), dir:'baisse', raison:'Séries bien en dessous de la fourchette ou échec (RIR 0) : on baisse.' };
+  if (dansFourchette) return { charge:last, dir:'maintien', raison:`Reps dans la fourchette (${rmin}-${rmax}) mais en dégradé : on garde la charge.` };
+  return { charge:last, dir:'maintien', raison:'Conforme aux attentes : on maintient.' };
+}
+function recoForce(sets, ex) {
+  if (!sets.length) return { charge:0, dir:'maintien', raison:'Aucune série.' };
+  const last = sets[sets.length-1], rirMoy = sets.reduce((a,s)=>a+s.rirR,0)/sets.length;
+  if (rirMoy >= 3) return { charge: arrondir(last.chargeR+ex.inc, ex.inc), dir:'hausse', raison:`RIR moyen ${rirMoy.toFixed(1)} ≥ 3 : marge trop grande, on augmente.` };
+  if (rirMoy <= 0) return { charge: arrondir(last.chargeR-ex.inc, ex.inc), dir:'baisse', raison:'RIR à 0 sur au moins une série : on répète ou baisse légèrement.' };
+  return { charge:last.chargeR, dir:'maintien', raison:`RIR moyen ${rirMoy.toFixed(1)} entre 1 et 2 : conforme, on suit le plan.` };
+}
+function reco(sets, ex, phase) { return phase==='force' ? recoForce(sets,ex) : recoHyper(sets,ex); }
+
+/* ============================================================================
+   PERSISTANCE — localStorage
+   ============================================================================ */
+
+const STORAGE_KEY = 'muscu-coach-state-v1';
+function seedTests(poids) {
+  const mk = (id, exId, charge, reps, rir, pdc) => {
+    const ct = charge + (pdc||0);
+    return { id, exId, date:new Date().toISOString(), charge, pdc, reps, rir, e1rm: calcE1RM(ct,reps), chargeTotale: ct, note:'Donnée de départ' };
+  };
+  return [
+    mk('seed-dc','developpe-couche',75,3,0),
+    mk('seed-dm','developpe-militaire',45,4,0),
+    mk('seed-tr','tractions-lestees',15,4.5,1,poids),
+    mk('seed-dih','developpe-incline-halteres',22,12,2),
+    mk('seed-cp','chest-press',40,8,1)
+  ];
+}
+function etatInitial() {
+  return { profile:null, dateDebut:new Date().toISOString(), tests:[], logs:[], injuryNotes:[], desactives:[], remplacements:{}, theme:'dark' };
+}
+function chargerEtat() {
+  try { const raw = localStorage.getItem(STORAGE_KEY); if (!raw) return etatInitial();
+    return { ...etatInitial(), ...JSON.parse(raw) };
+  } catch { return etatInitial(); }
+}
+function sauvegarderEtat(s) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch(e) { console.error(e); } }
+function avecSeedSiVide(s) { if (s.tests.length>0) return s; return { ...s, tests: seedTests(s.profile?.poids || 70) }; }
+
+/* ============================================================================
+   EXPORT
+   ============================================================================ */
+
+function telecharger(nom, contenu, mime) {
+  const blob = new Blob([contenu], {type:mime}); const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download=nom; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+function lignesExport(state) {
+  const lignes = [];
+  state.logs.forEach(l => l.exos.forEach(ex => {
+    const nom = getEx(ex.exId)?.nom || ex.exId;
+    ex.sets.forEach(s => lignes.push({ date:l.date.slice(0,10), seance:l.jour, exercice:nom, serie:s.n, chargePrevue:s.chargeP, chargeReelle:s.chargeR, repsPrevues:`${s.rmin}-${s.rmax}`, repsReelles:s.repsR, rirPrevu:s.rirP, rirReel:s.rirR, methode:s.methode }));
+  }));
+  return lignes;
+}
+function exportCSV(state) {
+  const l = lignesExport(state);
+  const h = ['date','seance','exercice','serie','chargePrevue','chargeReelle','repsPrevues','repsReelles','rirPrevu','rirReel','methode'];
+  const csv = [h.join(';'), ...l.map(x=>h.map(k=>String(x[k]).replace(';',',')).join(';'))].join('\n');
+  telecharger('muscu-coach-export.csv', csv, 'text/csv;charset=utf-8');
+}
+function exportJSON(state) { telecharger('muscu-coach-export.json', JSON.stringify(state,null,2), 'application/json'); }
+
+/* ============================================================================
+   CONTEXTE
+   ============================================================================ */
+
+const AppCtx = createContext(null);
+function AppProvider({ children }) {
+  const [state, setState] = useState(() => avecSeedSiVide(chargerEtat()));
+  useEffect(() => sauvegarderEtat(state), [state]);
+  useEffect(() => { document.body.classList.toggle('dark', state.theme==='dark'); document.body.classList.toggle('light', state.theme!=='dark'); }, [state.theme]);
+
+  const setProfile = useCallback(p => setState(s => ({...s, profile:p, dateDebut: p.dateDebut || s.dateDebut})), []);
+  const addTest = useCallback(t => setState(s => ({...s, tests:[...s.tests,t]})), []);
+  const addLog = useCallback(l => setState(s => { const ex = s.logs.some(x=>x.id===l.id); return {...s, logs: ex ? s.logs.map(x=>x.id===l.id?l:x) : [...s.logs,l]}; }), []);
+  const addInjury = useCallback(n => setState(s => ({...s, injuryNotes:[...s.injuryNotes,n]})), []);
+  const setDesactives = useCallback((ids, remp) => setState(s => ({...s, desactives:ids, remplacements:{...s.remplacements, ...remp}})), []);
+  const toggleTheme = useCallback(() => setState(s => ({...s, theme: s.theme==='dark'?'light':'dark'})), []);
+  const resetAll = useCallback(() => { localStorage.removeItem(STORAGE_KEY); setState(avecSeedSiVide(etatInitial())); }, []);
+
+  return <AppCtx.Provider value={{state,setProfile,addTest,addLog,addInjury,setDesactives,toggleTheme,resetAll}}>{children}</AppCtx.Provider>;
+}
+function useApp() { return useContext(AppCtx); }
+
+/* ============================================================================
+   COMPOSANTS UI
+   ============================================================================ */
+
+function NumberStepper({label, value, step, min=0, max=999, onChange}) {
+  const round = v => Math.round(v*100)/100;
+  return (
+    <div>
+      <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1">{label}</div>
+      <div className="flex items-center gap-1">
+        <button className="w-7 h-7 rounded-lg bg-black/5 dark:bg-white/10 font-bold shrink-0" onClick={()=>onChange(Math.max(min,round(value-step)))}>−</button>
+        <input type="number" className="input text-center px-1 py-1.5 text-sm" value={value} onChange={e=>onChange(+e.target.value)} />
+        <button className="w-7 h-7 rounded-lg bg-black/5 dark:bg-white/10 font-bold shrink-0" onClick={()=>onChange(Math.min(max,round(value+step)))}>+</button>
+      </div>
+    </div>
+  );
+}
+
+function RestTimer({secondes, onTermine}) {
+  const [restant, setRestant] = useState(secondes);
+  useEffect(()=>setRestant(secondes),[secondes]);
+  useEffect(()=>{ if(restant<=0) return; const id=setInterval(()=>setRestant(r=>r-1),1000); return ()=>clearInterval(id); },[restant]);
+  const min = Math.floor(restant/60), sec = restant%60;
+  return (
+    <div className="fixed inset-x-0 bottom-20 z-30 flex justify-center px-4">
+      <div className="card bg-accent text-white px-5 py-3 flex items-center gap-4 shadow-lg">
+        <span className="font-mono text-2xl font-extrabold tabular-nums">{restant>0 ? `${min}:${String(sec).padStart(2,'0')}` : 'Go !'}</span>
+        <button className="btn btn-ghost bg-white/20 text-white" onClick={()=>setRestant(r=>r+15)}>+15s</button>
+        <button className="btn btn-ghost bg-white/20 text-white" onClick={onTermine}>Passer</button>
+      </div>
+    </div>
+  );
+}
+
+function ProfileForm() {
+  const { state, setProfile } = useApp();
+  const ex = state.profile;
+  const [f, setF] = useState(ex || { prenom:'', age:30, poids:75, taille:178, objectif:'Prise de masse musculaire + progression en force', niveau:'intermédiaire', dateDebut:new Date().toISOString().slice(0,10), frequence:6, unite:'kg' });
+  const champ = (k,v) => setF(o=>({...o,[k]:v}));
+  return (
+    <form className="card p-5 space-y-4" onSubmit={e=>{e.preventDefault(); setProfile({...f, dateDebut:new Date(f.dateDebut).toISOString()});}}>
+      <div><label className="label">Prénom</label><input className="input" value={f.prenom} onChange={e=>champ('prenom',e.target.value)} required /></div>
+      <div className="grid grid-cols-3 gap-3">
+        <div><label className="label">Âge</label><input type="number" className="input" value={f.age} onChange={e=>champ('age',+e.target.value)} /></div>
+        <div><label className="label">Poids (kg)</label><input type="number" step="0.1" className="input" value={f.poids} onChange={e=>champ('poids',+e.target.value)} /></div>
+        <div><label className="label">Taille (cm)</label><input type="number" className="input" value={f.taille} onChange={e=>champ('taille',+e.target.value)} /></div>
+      </div>
+      <div><label className="label">Objectif principal</label><input className="input" value={f.objectif} onChange={e=>champ('objectif',e.target.value)} /></div>
+      <div className="grid grid-cols-2 gap-3">
+        <div><label className="label">Niveau</label>
+          <select className="input" value={f.niveau} onChange={e=>champ('niveau',e.target.value)}>
+            {['débutant','intermédiaire','avancé'].map(n=><option key={n} value={n}>{n}</option>)}
+          </select>
+        </div>
+        <div><label className="label">Fréquence (séances/sem)</label><input type="number" min="1" max="7" className="input" value={f.frequence} onChange={e=>champ('frequence',+e.target.value)} /></div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div><label className="label">Date de début</label><input type="date" className="input" value={f.dateDebut.slice(0,10)} onChange={e=>champ('dateDebut',e.target.value)} /></div>
+        <div><label className="label">Unité</label>
+          <select className="input" value={f.unite} onChange={e=>champ('unite',e.target.value)}><option value="kg">kg</option><option value="lb">lb</option></select>
+        </div>
+      </div>
+      <button type="submit" className="btn btn-primary w-full">{ex ? 'Enregistrer' : 'Démarrer mon programme'}</button>
+    </form>
+  );
+}
+
+function Dashboard({onOuvrirSeance, onNaviguer}) {
+  const { state } = useApp();
+  const semaine = computeCurrentWeek(state.dateDebut);
+  const bloc = getBlock(semaine);
+  const aujourdhui = JOURS_JS[new Date().getDay()];
+  const jp = getJour(aujourdhui);
+  const estRepos = !jp || jp.exos.length===0;
+  const joursActifs = SPLIT.filter(j=>j.exos.length>0);
+  const idx = joursActifs.findIndex(j=>j.jour===aujourdhui);
+  const prochaine = estRepos ? joursActifs[(idx+1+joursActifs.length)%joursActifs.length] : jp;
+
+  const recordsRecents = state.logs.flatMap(l=>l.exos.flatMap(ex=>ex.sets.filter(s=>s.chargeR>0).map(s=>({exId:ex.exId,charge:s.chargeR,reps:s.repsR,date:l.date}))))
+    .sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,3);
+  const derniersLogs = [...state.logs].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const dernierPoids = derniersLogs.find(l=>l.poidsJour)?.poidsJour ?? state.profile?.poids;
+  const fatigue = derniersLogs.find(l=>l.fatigue)?.fatigue;
+  const seances30j = state.logs.filter(l=>Date.now()-new Date(l.date).getTime() <= 30*24*3600*1000 && l.termine).length;
+
+  return (
+    <div className="space-y-4">
+      <div className="card p-4 flex items-center justify-between">
+        <div><div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Bloc actuel</div><div className="font-bold">{bloc.nom}</div><div className="text-xs text-slate-500 dark:text-slate-400">Semaine {semaine}</div></div>
+        <span className={`pill text-white ${PHASE_COLOR[bloc.phase]}`}>{PHASE_LABEL[bloc.phase]}</span>
+      </div>
+      <div className="card p-4">
+        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">{estRepos ? 'Aujourd’hui — repos' : 'Aujourd’hui'}</div>
+        {estRepos ? (
+          <div><div className="font-bold mb-2">Jour de repos 😌</div>
+            {prochaine && <button className="btn btn-primary" onClick={()=>onOuvrirSeance(prochaine.jour)}>Voir la prochaine séance — {prochaine.nom}</button>}
+          </div>
+        ) : (
+          <div><div className="font-bold text-lg">{jp.nom}</div><div className="text-sm text-slate-500 dark:text-slate-400 mb-3">{jp.focus}</div>
+            <button className="btn btn-primary" onClick={()=>onOuvrirSeance(aujourdhui)}>Démarrer la séance</button>
+          </div>
+        )}
+      </div>
+      <div className="card p-4">
+        <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">e1RM actuels</div>
+        <div className="grid grid-cols-2 gap-2">
+          {PRINCIPAUX.map(ex => { const e1 = e1rmRef(ex.id, state.tests); return (
+            <div key={ex.id} className="card2 p-2.5"><div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{ex.nom}</div><div className="font-bold">{e1?`${e1} kg`:'—'}</div></div>
+          );})}
+        </div>
+      </div>
+      {recordsRecents.length>0 && (
+        <div className="card p-4"><div className="text-xs text-slate-500 dark:text-slate-400 mb-2">Records récents</div>
+          <div className="space-y-1.5">{recordsRecents.map((r,i)=>(
+            <div key={i} className="flex justify-between text-sm"><span>{getEx(r.exId)?.nom}</span><span className="font-semibold">{r.charge} kg × {r.reps}</span></div>
+          ))}</div>
+        </div>
+      )}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="card p-3 text-center"><div className="text-[11px] text-slate-500 dark:text-slate-400">Poids</div><div className="font-bold text-lg">{dernierPoids?`${dernierPoids} kg`:'—'}</div></div>
+        <div className="card p-3 text-center"><div className="text-[11px] text-slate-500 dark:text-slate-400">Séances/30j</div><div className="font-bold text-lg">{seances30j}</div></div>
+        <div className="card p-3 text-center"><div className="text-[11px] text-slate-500 dark:text-slate-400">Fatigue</div><div className="font-bold text-lg">{fatigue?`${fatigue}/5`:'—'}</div></div>
+      </div>
+      <button className="btn btn-ghost w-full" onClick={()=>onNaviguer('graphiques')}>Voir la progression détaillée →</button>
+    </div>
+  );
+}
+
+function Tests() {
+  const { state, addTest } = useApp();
+  const [exId, setExId] = useState(PRINCIPAUX[0].id);
+  const [charge, setCharge] = useState(0);
+  const [reps, setReps] = useState(5);
+  const [rir, setRir] = useState(0);
+  const [note, setNote] = useState('');
+  const [poids, setPoids] = useState(state.profile?.poids || 75);
+  const leste = getEx(exId)?.type === 'poids-corps-leste';
+  const chargeTotale = leste ? poids + charge : charge;
+  const e1apercu = calcE1RM(chargeTotale, reps);
+
+  const enregistrer = () => {
+    addTest({ id:`test-${Date.now()}`, exId, date:new Date().toISOString(), charge, pdc: leste?poids:undefined, reps, rir, note: note||undefined, e1rm: e1apercu, chargeTotale });
+    setNote('');
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="card p-4">
+        <h2 className="font-bold mb-1">Nouveau test de force</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Un test de calibration ne devient jamais automatiquement une charge de travail hypertrophie.</p>
+        <label className="label">Exercice</label>
+        <select className="input mb-3" value={exId} onChange={e=>setExId(e.target.value)}>{PRINCIPAUX.map(ex=><option key={ex.id} value={ex.id}>{ex.nom}</option>)}</select>
+        {leste ? (
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div><label className="label">Poids de corps (kg)</label><input type="number" step="0.5" className="input" value={poids} onChange={e=>setPoids(+e.target.value)} /></div>
+            <div><label className="label">Lest ajouté (kg)</label><input type="number" step="1.25" className="input" value={charge} onChange={e=>setCharge(+e.target.value)} /></div>
+          </div>
+        ) : (
+          <div className="mb-3"><label className="label">Charge utilisée (kg)</label><input type="number" step="1.25" className="input" value={charge} onChange={e=>setCharge(+e.target.value)} /></div>
+        )}
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div><label className="label">Répétitions</label><input type="number" className="input" value={reps} onChange={e=>setReps(+e.target.value)} /></div>
+          <div><label className="label">RIR</label><input type="number" min="0" max="5" className="input" value={rir} onChange={e=>setRir(+e.target.value)} /></div>
+        </div>
+        <div className="mb-3"><label className="label">Remarque</label><input className="input" value={note} onChange={e=>setNote(e.target.value)} /></div>
+        {leste && <div className="card2 p-2.5 mb-3 text-xs">Charge totale = poids de corps + lest = <strong>{chargeTotale} kg</strong></div>}
+        <div className="card2 p-3 mb-3 flex items-center justify-between"><span className="text-sm text-slate-500 dark:text-slate-400">e1RM estimé</span><span className="font-extrabold text-lg text-accent">{e1apercu} kg</span></div>
+        <button className="btn btn-primary w-full" onClick={enregistrer}>Enregistrer le test</button>
+      </div>
+      <div className="card p-4">
+        <h2 className="font-bold mb-3">e1RM actuels & paliers</h2>
+        <div className="space-y-4">
+          {PRINCIPAUX.map(ex => { const t = dernierTest(ex.id, state.tests); if (!t) return null; const paliers = calcPaliers(t.e1rm); return (
+            <div key={ex.id}>
+              <div className="flex items-center justify-between mb-1.5"><span className="font-semibold text-sm">{ex.nom}</span><span className="text-xs text-slate-500 dark:text-slate-400">e1RM {t.e1rm} kg · {new Date(t.date).toLocaleDateString('fr-FR')}</span></div>
+              <div className="flex gap-1.5 overflow-x-auto pb-1">{paliers.map(p=>(
+                <div key={p.p} className="card2 px-2.5 py-1.5 text-center shrink-0"><div className="text-[10px] text-slate-500 dark:text-slate-400">{p.p}%</div><div className="text-xs font-bold">{p.charge}kg</div></div>
+              ))}</div>
+            </div>
+          );})}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProgramView({onOuvrirSeance}) {
+  const { state } = useApp();
+  const semaine = computeCurrentWeek(state.dateDebut);
+  const bloc = getBlock(semaine);
+  const [ouvert, setOuvert] = useState(null);
+  const preview = ouvert ? construireSeance(ouvert, semaine, state.tests, state.desactives, state.remplacements) : null;
+  return (
+    <div className="space-y-4">
+      <div className="card p-4"><div className="text-xs text-slate-500 dark:text-slate-400">Semaine {semaine} — {bloc.nom}</div><p className="text-sm mt-1">{bloc.desc}</p></div>
+      <div className="space-y-2">
+        {SPLIT.map(j => (
+          <div key={j.jour} className="card overflow-hidden">
+            <button className="w-full p-3.5 flex items-center justify-between text-left" onClick={()=>setOuvert(ouvert===j.jour?null:j.jour)}>
+              <div><div className="text-[11px] uppercase tracking-wide text-slate-400">{j.jour}</div><div className="font-semibold">{j.nom}</div></div>
+              {j.exos.length>0 && <span className="text-xs text-slate-400">{j.exos.length} exos</span>}
+            </button>
+            {ouvert===j.jour && preview && (
+              <div className="border-t border-black/5 dark:border-white/5 p-3.5 space-y-3">
+                {preview.exercices.map(pe => { const ex = getEx(pe.exId); return (
+                  <div key={pe.exId} className="card2 p-3">
+                    <div className="font-semibold text-sm mb-1.5">{ex?.nom}</div>
+                    <div className="space-y-1">{pe.sets.map(s=>(
+                      <div key={s.n} className="text-xs flex flex-wrap gap-x-2 text-slate-600 dark:text-slate-300">
+                        <span className="font-medium">S{s.n}</span><span>{s.rmin===s.rmax?s.rmin:`${s.rmin}-${s.rmax}`} reps</span><span>RIR {s.rir}</span>
+                        {s.pct && <span>{Math.round(s.pct*10)/10}% e1RM</span>}
+                        {s.methode!=='aucune' && <span className="text-accent">{s.methode}</span>}
+                        <span className="text-slate-400">repos {s.repos>=60?`${Math.round(s.repos/60*10)/10}min`:`${s.repos}s`}</span>
+                      </div>
+                    ))}</div>
+                  </div>
+                );})}
+                <button className="btn btn-primary w-full" onClick={()=>onOuvrirSeance(j.jour)}>Démarrer cette séance</button>
+              </div>
+            )}
+            {ouvert===j.jour && !preview && <div className="border-t border-black/5 dark:border-white/5 p-3.5 text-sm text-slate-400">Jour de repos.</div>}
+          </div>
+        ))}
+      </div>
+      <div className="card p-4"><h3 className="font-bold mb-2">Aide RIR</h3>
+        <div className="space-y-1 text-sm">
+          {[{n:4,t:'très facile'},{n:3,t:'encore 3 reps possibles'},{n:2,t:'encore 2 reps'},{n:1,t:'encore 1 rep'},{n:0,t:'aucune rep supplémentaire propre'}].map(r=>(
+            <div key={r.n} className="flex gap-2"><span className="font-semibold w-16">RIR {r.n}</span><span className="text-slate-500 dark:text-slate-400">{r.t}</span></div>
+          ))}
+        </div>
+      </div>
+      <div className="card p-4"><h3 className="font-bold mb-2">Tempo (ex : 3-0-X-0)</h3>
+        <div className="grid grid-cols-2 gap-2 text-sm text-slate-600 dark:text-slate-300">
+          <div><strong>3</strong> — excentrique, 3s</div><div><strong>0</strong> — pause bas, aucune</div>
+          <div><strong>X</strong> — concentrique explosive</div><div><strong>0</strong> — verrouillage, aucune</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Workout({jourInitial}) {
+  const { state, addLog } = useApp();
+  const [jour, setJour] = useState(jourInitial || JOURS_JS[new Date().getDay()]);
+  const semaine = computeCurrentWeek(state.dateDebut);
+  const bloc = getBlock(semaine);
+  const seance = useMemo(()=>construireSeance(jour, semaine, state.tests, state.desactives, state.remplacements), [jour, semaine, state.tests, state.desactives, state.remplacements]);
+  const [logs, setLogs] = useState({});
+  const [repos, setRepos] = useState(null);
+  const [poidsJour, setPoidsJour] = useState('');
+  const [fatigue, setFatigue] = useState('');
+
+  useEffect(() => {
+    if (!seance) { setLogs({}); return; }
+    const triés = [...state.logs].sort((a,b)=>new Date(b.date)-new Date(a.date));
+    const init = {};
+    seance.exercices.forEach(pe => {
+      const dernier = triés.flatMap(l=>l.exos.filter(e=>e.exId===pe.exId))[0];
+      const ex = getEx(pe.exId);
+      const e1 = state.tests.filter(t=>t.exId===pe.exId).sort((a,b)=>new Date(b.date)-new Date(a.date))[0]?.e1rm || 0;
+      init[pe.exId] = pe.sets.map(s => {
+        const prec = dernier?.sets[s.n-1];
+        const chargeP = s.pct ? arrondir((e1*s.pct)/100, ex?.inc||2.5) : (prec?.chargeR ?? 0);
+        return { n:s.n, chargeP, chargeR:chargeP, rmin:s.rmin, rmax:s.rmax, repsR:s.rmax, rirP:s.rir, rirR:s.rir, methode:s.methode, valide:false };
+      });
+    });
+    setLogs(init);
+  }, [seance?.jour, semaine]);
+
+  if (!seance) return (
+    <div className="space-y-3"><SelecteurJour jour={jour} setJour={setJour} /><div className="card p-6 text-center text-slate-400">Jour de repos — aucune séance prévue.</div></div>
+  );
+
+  const majSet = (exId, n, patch) => setLogs(prev => ({...prev, [exId]: prev[exId].map(s=>s.n===n?{...s,...patch}:s)}));
+  const valider = (exId, n, r) => { majSet(exId, n, {valide:true}); setRepos(r); };
+  const terminer = () => {
+    const exos = seance.exercices.map(pe => ({ exId: pe.exId, sets: logs[pe.exId] || [] }));
+    addLog({ id:`log-${jour}-${new Date().toISOString().slice(0,10)}`, date:new Date().toISOString(), jour, semaine, phase:bloc.phase, exos, poidsJour: poidsJour===''?undefined:+poidsJour, fatigue: fatigue===''?undefined:+fatigue, termine:true });
+    setLogs({}); setPoidsJour(''); setFatigue('');
+  };
+
+  return (
+    <div className="space-y-4">
+      <SelecteurJour jour={jour} setJour={setJour} />
+      <div className="card p-4"><div className="font-bold text-lg">{seance.nom}</div><div className="text-xs text-slate-500 dark:text-slate-400">{seance.focus} · {bloc.nom}</div></div>
+      {seance.exercices.map(pe => {
+        const ex = getEx(pe.exId);
+        const sets = logs[pe.exId] || [];
+        const valides = sets.filter(s=>s.valide);
+        const r = ex && valides.length===pe.sets.length ? reco(valides, ex, bloc.phase) : null;
+        return (
+          <div key={pe.exId} className="card p-4">
+            <div className="font-semibold mb-3">{ex?.nom}</div>
+            <div className="space-y-2.5">
+              {pe.sets.map(prescrit => {
+                const set = sets.find(s=>s.n===prescrit.n);
+                if (!set) return null;
+                return (
+                  <div key={prescrit.n} className={`card2 p-3 ${set.valide?'opacity-70':''}`}>
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+                      <span>Série {prescrit.n} · {prescrit.rmin===prescrit.rmax?prescrit.rmin:`${prescrit.rmin}-${prescrit.rmax}`} reps · RIR {prescrit.rir}{prescrit.pct?` · ${Math.round(prescrit.pct)}%`:''}</span>
+                      {prescrit.methode!=='aucune' && <span className="text-accent font-semibold">{prescrit.methode}</span>}
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <NumberStepper label="Charge (kg)" value={set.chargeR} step={ex?.inc||2.5} onChange={v=>majSet(pe.exId,prescrit.n,{chargeR:v})} />
+                      <NumberStepper label="Reps" value={set.repsR} step={1} onChange={v=>majSet(pe.exId,prescrit.n,{repsR:v})} />
+                      <NumberStepper label="RIR" value={set.rirR} step={1} min={0} max={5} onChange={v=>majSet(pe.exId,prescrit.n,{rirR:v})} />
+                    </div>
+                    <button className={`btn w-full mt-2.5 ${set.valide?'btn-ghost':'btn-primary'}`} onClick={()=>valider(pe.exId,prescrit.n,prescrit.repos)}>{set.valide?'✓ Série validée':'Valider la série'}</button>
+                  </div>
+                );
+              })}
+            </div>
+            {r && (
+              <div className="card2 p-3 mt-3 text-xs">
+                <div className="font-semibold mb-0.5">Prochaine séance : <span className={r.dir==='hausse'?'text-emerald-500':r.dir==='baisse'?'text-red-500':'text-slate-400'}>{r.charge} kg ({r.dir})</span></div>
+                <div className="text-slate-500 dark:text-slate-400">{r.raison}</div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <div className="card p-4 space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div><label className="label">Poids du jour (kg)</label><input type="number" step="0.1" className="input" value={poidsJour} onChange={e=>setPoidsJour(e.target.value)} /></div>
+          <div><label className="label">Fatigue ressentie</label>
+            <select className="input" value={fatigue} onChange={e=>setFatigue(e.target.value)}>
+              <option value="">—</option>{[1,2,3,4,5].map(n=><option key={n} value={n}>{n}/5</option>)}
+            </select>
+          </div>
+        </div>
+        <button className="btn btn-primary w-full" onClick={terminer}>Terminer la séance</button>
+      </div>
+      {repos!==null && <RestTimer secondes={repos} onTermine={()=>setRepos(null)} />}
+    </div>
+  );
+}
+
+function SelecteurJour({jour, setJour}) {
+  return (
+    <div className="flex gap-1.5 overflow-x-auto pb-1">
+      {JOURS_ORDRE.map(j=>(
+        <button key={j} onClick={()=>setJour(j)} className={`px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 capitalize ${jour===j?'bg-accent text-white':'card2 text-slate-500 dark:text-slate-400'}`}>{j}</button>
+      ))}
+    </div>
+  );
+}
+
+function History() {
+  const { state } = useApp();
+  const [filtre, setFiltre] = useState('');
+  const exercicesAvecDonnees = useMemo(() => EXERCISES.filter(ex => {
+    const t = state.tests.some(t=>t.exId===ex.id);
+    const l = state.logs.some(l=>l.exos.some(e=>e.exId===ex.id && e.sets.some(s=>s.chargeR>0)));
+    return (t||l) && ex.nom.toLowerCase().includes(filtre.toLowerCase());
+  }), [state.tests, state.logs, filtre]);
+
+  return (
+    <div className="space-y-4">
+      <div className="card p-4"><h2 className="font-bold mb-1">Historique & records</h2><input className="input" placeholder="Filtrer un exercice..." value={filtre} onChange={e=>setFiltre(e.target.value)} /></div>
+      {exercicesAvecDonnees.length===0 && <div className="card p-6 text-center text-slate-400 text-sm">Pas encore de données.</div>}
+      {exercicesAvecDonnees.map(ex => { const h = historique(ex.id, state.tests, state.logs); return (
+        <div key={ex.id} className="card p-4">
+          <div className="flex items-center justify-between mb-2"><span className="font-semibold">{ex.nom}</span><span className="text-xs text-slate-500 dark:text-slate-400">e1RM max {h.e1rmMax} kg</span></div>
+          <div className="text-xs mb-2 text-slate-500 dark:text-slate-400">Meilleure charge : <strong className="text-slate-800 dark:text-slate-100">{h.meilleurCharge} kg</strong></div>
+          <div className="flex gap-1.5 overflow-x-auto">
+            {[3,5,8,10,12].map(r => { const rec = h.records[r]; return (
+              <div key={r} className="card2 px-2.5 py-1.5 text-center shrink-0"><div className="text-[10px] text-slate-500 dark:text-slate-400">{r}RM</div><div className="text-xs font-bold">{rec?`${rec.charge}kg`:'—'}</div></div>
+            );})}
+          </div>
+        </div>
+      );})}
+      <div className="card p-4 space-y-2"><h3 className="font-bold mb-1">Export</h3>
+        <div className="grid grid-cols-2 gap-2"><button className="btn btn-ghost" onClick={()=>exportCSV(state)}>CSV</button><button className="btn btn-ghost" onClick={()=>exportJSON(state)}>JSON</button></div>
+      </div>
+    </div>
+  );
+}
+
+/* Petit chart SVG maison (pas de dépendance externe) */
+function MiniChart({data, keys, colors, height=180}) {
+  if (!data.length) return <div className="text-xs text-slate-400">Pas de données.</div>;
+  const w = 320;
+  const allVals = data.flatMap(d=>keys.map(k=>d[k]||0));
+  const max = Math.max(...allVals, 1), min = Math.min(...allVals, 0);
+  const range = max-min || 1;
+  const stepX = data.length>1 ? w/(data.length-1) : 0;
+  const y = v => height - ((v-min)/range)*height*0.85 - 8;
+  return (
+    <svg viewBox={`0 0 ${w} ${height}`} className="w-full" style={{height}}>
+      {keys.map((k,ki) => {
+        const pts = data.map((d,i)=>`${i*stepX},${y(d[k]||0)}`).join(' ');
+        return <polyline key={k} points={pts} fill="none" stroke={colors[ki]} strokeWidth="2" />;
+      })}
+    </svg>
+  );
+}
+function BarChartSVG({data, height=180, color='#ff5a36'}) {
+  if (!data.length) return <div className="text-xs text-slate-400">Pas de données.</div>;
+  const w = 320, max = Math.max(...data.map(d=>d.v), 1);
+  const bw = w/data.length;
+  return (
+    <svg viewBox={`0 0 ${w} ${height}`} className="w-full" style={{height}}>
+      {data.map((d,i) => { const h = (d.v/max)*height*0.85; return (
+        <rect key={i} x={i*bw+2} y={height-h} width={bw-4} height={h} fill={color} rx="3" />
+      );})}
+    </svg>
+  );
+}
+
+function Charts() {
+  const { state } = useApp();
+  const exercicesAvecDonnees = EXERCISES.filter(ex => state.logs.some(l=>l.exos.some(e=>e.exId===ex.id && e.sets.some(s=>s.chargeR>0))));
+  const [exId, setExId] = useState(exercicesAvecDonnees[0]?.id || '');
+  const evolution = useMemo(() => {
+    if (!exId) return [];
+    return [...state.logs].sort((a,b)=>new Date(a.date)-new Date(b.date)).flatMap(l => {
+      const ex = l.exos.find(e=>e.exId===exId); if (!ex) return [];
+      const best = ex.sets.reduce((b,s)=>s.chargeR>(b?.chargeR||0)?s:b, ex.sets[0]); if (!best) return [];
+      return [{ charge: best.chargeR, e1rm: calcE1RM(best.chargeR, best.repsR) }];
+    });
+  }, [exId, state.logs]);
+  const poids = useMemo(() => state.logs.filter(l=>l.poidsJour).sort((a,b)=>new Date(a.date)-new Date(b.date)).map(l=>({poids:l.poidsJour})), [state.logs]);
+  const volumeSeance = useMemo(() => [...state.logs].sort((a,b)=>new Date(a.date)-new Date(b.date)).map(l=>({v:Math.round(l.exos.reduce((a,ex)=>a+ex.sets.reduce((x,s)=>x+s.chargeR*s.repsR,0),0))})), [state.logs]);
+  const volumeMuscle = useMemo(() => {
+    const t = {};
+    state.logs.forEach(l=>l.exos.forEach(ex=>{ const info=getEx(ex.exId); if(!info) return; const v=ex.sets.reduce((a,s)=>a+s.chargeR*s.repsR,0); t[info.cat]=(t[info.cat]||0)+v; }));
+    return Object.entries(t).map(([cat,v])=>({cat,v:Math.round(v)}));
+  }, [state.logs]);
+
+  if (state.logs.length===0) return <div className="card p-6 text-center text-slate-400 text-sm">Pas encore de séances enregistrées.</div>;
+
+  return (
+    <div className="space-y-4">
+      {exercicesAvecDonnees.length>0 && (
+        <div className="card p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold">Progression par exercice</h3>
+            <select className="input w-auto text-xs" value={exId} onChange={e=>setExId(e.target.value)}>{exercicesAvecDonnees.map(ex=><option key={ex.id} value={ex.id}>{ex.nom}</option>)}</select>
+          </div>
+          <MiniChart data={evolution} keys={['e1rm','charge']} colors={['#ff5a36','#5b8cff']} />
+          <div className="flex gap-4 mt-2 text-[11px]"><span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{background:'#ff5a36'}}></span>e1RM</span><span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{background:'#5b8cff'}}></span>Charge</span></div>
+        </div>
+      )}
+      {poids.length>0 && <div className="card p-4"><h3 className="font-bold mb-3">Poids du corps</h3><MiniChart data={poids} keys={['poids']} colors={['#5b8cff']} /></div>}
+      <div className="card p-4"><h3 className="font-bold mb-3">Volume total par séance</h3><BarChartSVG data={volumeSeance} /></div>
+      <div className="card p-4"><h3 className="font-bold mb-3">Volume par muscle</h3>
+        <div className="space-y-1.5">{volumeMuscle.sort((a,b)=>b.v-a.v).map(m=>(
+          <div key={m.cat} className="flex items-center gap-2 text-xs">
+            <span className="w-24 shrink-0 capitalize text-slate-500 dark:text-slate-400">{m.cat}</span>
+            <div className="flex-1 h-3 rounded-full bg-black/5 dark:bg-white/10 overflow-hidden"><div className="h-full bg-force" style={{width:`${(m.v/Math.max(...volumeMuscle.map(x=>x.v),1))*100}%`}}></div></div>
+            <span className="w-14 text-right font-semibold">{m.v}kg</span>
+          </div>
+        ))}</div>
+      </div>
+    </div>
+  );
+}
+
+function InjuryMode() {
+  const { state, addInjury, setDesactives } = useApp();
+  const [zone, setZone] = useState('');
+  const [note, setNote] = useState('');
+  const [choisis, setChoisis] = useState([]);
+  const [remp, setRemp] = useState({});
+  const toggle = id => setChoisis(p => p.includes(id) ? p.filter(x=>x!==id) : [...p,id]);
+  const enregistrer = () => {
+    addInjury({ id:`inj-${Date.now()}`, date:new Date().toISOString(), zone, note, exos: choisis });
+    setDesactives(Array.from(new Set([...state.desactives, ...choisis])), remp);
+    setZone(''); setNote(''); setChoisis([]); setRemp({});
+  };
+  const reactiver = id => setDesactives(state.desactives.filter(e=>e!==id), {});
+
+  return (
+    <div className="space-y-4">
+      <div className="card p-4">
+        <h2 className="font-bold mb-1">Mode blessure / adaptation</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Désactive temporairement des exercices, avec remplacement suggéré.</p>
+        <label className="label">Zone / douleur</label><input className="input mb-3" placeholder="ex : douleur cheville" value={zone} onChange={e=>setZone(e.target.value)} />
+        <label className="label">Note</label><input className="input mb-3" placeholder="ex : gonflement après séance" value={note} onChange={e=>setNote(e.target.value)} />
+        <label className="label">Exercices à désactiver</label>
+        <div className="grid grid-cols-2 gap-1.5 mb-3 max-h-48 overflow-y-auto">
+          {EXERCISES.map(ex => (
+            <label key={ex.id} className="flex items-center gap-2 text-xs card2 px-2 py-1.5"><input type="checkbox" checked={choisis.includes(ex.id)} onChange={()=>toggle(ex.id)} />{ex.nom}</label>
+          ))}
+        </div>
+        {choisis.map(id => { const sugg = REMPLACEMENTS[id] || EXERCISES.map(e=>e.id); const exo = EXERCISES.find(e=>e.id===id); return (
+          <div key={id} className="mb-2"><label className="label">Remplacer {exo?.nom} par</label>
+            <select className="input" value={remp[id]||''} onChange={e=>setRemp(r=>({...r,[id]:e.target.value}))}>
+              <option value="">— aucun —</option>{sugg.map(sid=><option key={sid} value={sid}>{EXERCISES.find(e=>e.id===sid)?.nom}</option>)}
+            </select>
+          </div>
+        );})}
+        <button className="btn btn-primary w-full mt-2" onClick={enregistrer} disabled={!zone}>Enregistrer et adapter</button>
+      </div>
+      {state.desactives.length>0 && (
+        <div className="card p-4"><h3 className="font-bold mb-2">Exercices désactivés</h3>
+          <div className="space-y-1.5">{state.desactives.map(id=>(
+            <div key={id} className="flex items-center justify-between card2 px-3 py-2">
+              <span className="text-sm">{EXERCISES.find(e=>e.id===id)?.nom}{state.remplacements[id] && <span className="text-xs text-slate-400"> → {EXERCISES.find(e=>e.id===state.remplacements[id])?.nom}</span>}</span>
+              <button className="text-xs text-accent font-semibold" onClick={()=>reactiver(id)}>Réactiver</button>
+            </div>
+          ))}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Settings() {
+  const { state, toggleTheme, resetAll } = useApp();
+  const [confirm, setConfirm] = useState(false);
+  return (
+    <div className="space-y-4">
+      <div className="card p-4 flex items-center justify-between">
+        <div><div className="font-bold">Thème</div><div className="text-xs text-slate-500 dark:text-slate-400">Sombre ou clair</div></div>
+        <button className="btn btn-ghost" onClick={toggleTheme}>{state.theme==='dark'?'🌙 Sombre':'☀️ Clair'}</button>
+      </div>
+      <div className="card p-4"><h3 className="font-bold mb-3">Profil</h3><ProfileForm /></div>
+      <div className="card p-4 space-y-2"><h3 className="font-bold mb-1">Export</h3>
+        <div className="grid grid-cols-2 gap-2"><button className="btn btn-ghost" onClick={()=>exportCSV(state)}>CSV</button><button className="btn btn-ghost" onClick={()=>exportJSON(state)}>JSON</button></div>
+      </div>
+      <div className="card p-4">
+        <h3 className="font-bold mb-1 text-red-500">Zone dangereuse</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Réinitialise entièrement l’application.</p>
+        {!confirm ? <button className="btn btn-ghost text-red-500" onClick={()=>setConfirm(true)}>Réinitialiser toutes les données</button> : (
+          <div className="flex gap-2">
+            <button className="btn bg-red-500 text-white flex-1" onClick={()=>{resetAll(); setConfirm(false);}}>Confirmer</button>
+            <button className="btn btn-ghost flex-1" onClick={()=>setConfirm(false)}>Annuler</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const TABS = [
+  {id:'dashboard', label:'Accueil', icon:'🏠'}, {id:'programme', label:'Programme', icon:'📅'}, {id:'workout', label:'Séance', icon:'🏋️'},
+  {id:'tests', label:'Tests', icon:'🎯'}, {id:'historique', label:'Historique', icon:'📈'}, {id:'graphiques', label:'Graphes', icon:'📊'},
+  {id:'blessure', label:'Adaptation', icon:'🩹'}, {id:'reglages', label:'Réglages', icon:'⚙️'}
+];
+
+function App() {
+  const { state } = useApp();
+  const [tab, setTab] = useState('dashboard');
+  const [jourForce, setJourForce] = useState(null);
+
+  if (!state.profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <h1 className="text-2xl font-extrabold mb-1">Muscu Coach</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Configure ton profil pour démarrer.</p>
+          <ProfileForm />
+        </div>
+      </div>
+    );
+  }
+
+  const ouvrirSeance = j => { setJourForce(j); setTab('workout'); };
+
+  return (
+    <div className="min-h-screen pb-24">
+      <header className="sticky top-0 z-20 bg-bg/90 dark:bg-bg-dark/90 backdrop-blur border-b border-black/5 dark:border-white/5 px-4 py-3">
+        <div className="text-xs text-slate-500 dark:text-slate-400">Salut {state.profile.prenom} 👋</div>
+        <div className="font-extrabold text-lg leading-tight">Muscu Coach</div>
+      </header>
+      <main className="max-w-3xl mx-auto px-4 py-4">
+        {tab==='dashboard' && <Dashboard onOuvrirSeance={ouvrirSeance} onNaviguer={setTab} />}
+        {tab==='programme' && <ProgramView onOuvrirSeance={ouvrirSeance} />}
+        {tab==='workout' && <Workout jourInitial={jourForce} />}
+        {tab==='tests' && <Tests />}
+        {tab==='historique' && <History />}
+        {tab==='graphiques' && <Charts />}
+        {tab==='blessure' && <InjuryMode />}
+        {tab==='reglages' && <Settings />}
+      </main>
+      <nav className="fixed bottom-0 left-0 right-0 z-20 bg-surface/95 dark:bg-surface-dark/95 backdrop-blur border-t border-black/5 dark:border-white/5">
+        <div className="max-w-3xl mx-auto grid grid-cols-4 sm:grid-cols-8">
+          {TABS.map(t=>(
+            <button key={t.id} onClick={()=>setTab(t.id)} className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition ${tab===t.id?'text-accent':'text-slate-400 dark:text-slate-500'}`}>
+              <span className="text-base leading-none">{t.icon}</span>{t.label}
+            </button>
+          ))}
+        </div>
+      </nav>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<AppProvider><App /></AppProvider>);
+</script>
+</body>
+</html>
