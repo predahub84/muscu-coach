@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Muscu Coach Pro V2</title>
+<style>
+:root{
+  --bg:#08111f;--card:#101c2f;--card2:#15233a;--line:#24344f;--txt:#f4f7fb;--muted:#93a4bd;
+  --accent:#53d7d2;--accent2:#6ee7b7;--danger:#ff6b6b;--warn:#f6c85f;--blue:#76a7ff
+}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#07101d,#0a1424);color:var(--txt);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif}
+button,input,select{font:inherit}
+.app{max-width:760px;margin:auto;min-height:100vh;padding-bottom:86px}
+header{position:sticky;top:0;z-index:10;background:rgba(8,17,31,.96);backdrop-filter:blur(10px);padding:18px 18px 14px;border-bottom:1px solid var(--line)}
+h1{margin:0;font-size:28px;line-height:1.1}.sub{color:var(--muted);margin-top:4px;font-size:15px}
+.badge{display:inline-flex;align-items:center;gap:6px;border:1px solid #1d5962;background:#0d2d35;color:#7de7e3;border-radius:999px;padding:8px 12px;font-weight:800;font-size:13px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+main{padding:16px}
+.card{background:linear-gradient(180deg,#111e32,#0f1a2c);border:1px solid var(--line);border-radius:22px;padding:18px;margin-bottom:14px;box-shadow:0 8px 30px rgba(0,0,0,.16)}
+.title{font-size:20px;font-weight:850}.small{font-size:13px;color:var(--muted)}
+.btn{border:0;border-radius:14px;padding:12px 14px;font-weight:800;cursor:pointer}
+.primary{background:var(--accent);color:#062326}.ghost{background:#1a2941;color:var(--txt);border:1px solid var(--line)}
+.danger{background:#392028;color:#ff9b9b;border:1px solid #63303a}
+.day{cursor:pointer;transition:.15s}
+.day:active{transform:scale(.99)}
+.dayhead{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.chev{font-size:22px;color:var(--muted);transition:.2s}.day.open .chev{transform:rotate(90deg)}
+.details{display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}.day.open .details{display:block}
+.exercise{background:var(--card2);border:1px solid #2b3d59;border-radius:16px;padding:14px;margin:10px 0}
+.exname{font-weight:850;font-size:16px}.meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.pill{background:#0e1727;border:1px solid #2a3a54;color:#bfd0e7;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:750}
+.charge{background:#113033;border-color:#1d5b5c;color:#8ff1eb}
+.superset{border-left:4px solid var(--blue)}
+.tabs{position:fixed;left:0;right:0;bottom:0;background:rgba(8,17,31,.98);border-top:1px solid var(--line);display:flex;justify-content:center;z-index:20}
+.tabsin{width:min(760px,100%);display:grid;grid-template-columns:repeat(5,1fr)}
+.tab{background:none;border:0;color:#7e90ab;padding:10px 4px 12px;font-size:11px;font-weight:800}.tab .ico{display:block;font-size:20px;margin-bottom:2px}.tab.active{color:var(--accent)}
+.hidden{display:none!important}
+label{display:block;color:var(--muted);font-size:12px;font-weight:700;margin:9px 0 5px}
+input,select{width:100%;background:#0c1728;color:var(--txt);border:1px solid #2b3c58;border-radius:12px;padding:11px 12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.testrow{background:var(--card2);border:1px solid #2b3d59;border-radius:15px;padding:13px;margin:9px 0}
+.testactions{display:flex;gap:8px;margin-top:10px}
+.workout-set{display:grid;grid-template-columns:1.2fr .8fr .8fr .8fr;gap:8px;align-items:end;margin:9px 0}
+.setlabel{font-size:12px;color:var(--muted);padding-bottom:12px}
+.notice{background:#1f2632;border:1px solid #39445a;color:#d7e0ec;border-radius:15px;padding:12px;font-size:13px}
+.good{color:#83efc1}.warn{color:#ffd677}
+hr{border:0;border-top:1px solid var(--line);margin:14px 0}
+@media(max-width:560px){.workout-set{grid-template-columns:1fr 1fr}.setlabel{display:none}.grid2{grid-template-columns:1fr}.title{font-size:18px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="row">
+    <div><h1>Muscu Coach Pro</h1><div class="sub" id="phaseLabel">Semaine 0 · Calibration</div></div>
+    <div class="badge" id="weekBadge">S0</div>
+  </div>
+</header>
+
+<main>
+<section id="home">
+  <div class="card">
+    <div class="small">Aujourd’hui</div>
+    <div class="title" id="todayName">Pectoraux + épaules B</div>
+    <div class="sub" id="todayFocus">Volume / congestion</div>
+    <button class="btn primary" style="margin-top:14px;width:100%" onclick="openToday()">Voir / démarrer la séance</button>
+  </div>
+  <div class="card">
+    <div class="title">Tes repères actuels</div>
+    <div id="homeTests"></div>
+  </div>
+</section>
+
+<section id="program" class="hidden">
+  <div class="card">
+    <div class="title">Programme 20 semaines</div>
+    <div class="sub">Clique sur une journée pour ouvrir le détail complet.</div>
+  </div>
+  <div id="days"></div>
+</section>
+
+<section id="workout" class="hidden">
+  <div class="card">
+    <div class="row"><div><div class="small">Séance</div><div class="title" id="woTitle"></div><div class="sub" id="woFocus"></div></div>
+      <button class="btn ghost" onclick="showTab('program')">← Programme</button>
+    </div>
+  </div>
+  <div id="woExercises"></div>
+  <button class="btn primary" style="width:100%;margin-bottom:30px" onclick="finishWorkout()">Terminer & enregistrer</button>
+</section>
+
+<section id="tests" class="hidden">
+  <div class="card">
+    <div class="title">Tests / références de force</div>
+    <div class="sub">Tu peux enfin modifier ou supprimer tes références.</div>
+    <hr>
+    <div class="grid2">
+      <div><label>Exercice</label><select id="testEx"></select></div>
+      <div><label>Charge / lest (kg)</label><input id="testLoad" type="number" step="0.5"></div>
+      <div><label>Répétitions</label><input id="testReps" type="number" step="1"></div>
+      <div><label>RIR</label><input id="testRir" type="number" min="0" max="5" step="1"></div>
+    </div>
+    <label>Poids du corps (tractions uniquement)</label><input id="testBw" type="number" step="0.1">
+    <button class="btn primary" style="width:100%;margin-top:12px" onclick="saveTest()">Ajouter la référence</button>
+  </div>
+  <div id="testList"></div>
+</section>
+
+<section id="settings" class="hidden">
+  <div class="card">
+    <div class="title">Réglages</div>
+    <div class="grid2">
+      <div><label>Poids du corps</label><input id="bodyWeight" type="number" step="0.1" onchange="saveSettings()"></div>
+      <div><label>Semaine actuelle</label><input id="weekInput" type="number" min="0" max="20" onchange="saveSettings()"></div>
+    </div>
+    <div class="notice" style="margin-top:12px">Les charges futures du bloc force seront recalculées avec les références les plus récentes, pas figées dès aujourd’hui.</div>
+  </div>
+</section>
+</main>
+
+<nav class="tabs">
+<div class="tabsin">
+  <button class="tab active" data-tab="home" onclick="showTab('home')"><span class="ico">⌂</span>Accueil</button>
+  <button class="tab" data-tab="program" onclick="showTab('program')"><span class="ico">▦</span>Programme</button>
+  <button class="tab" data-tab="workout" onclick="openToday()"><span class="ico">＋</span>Séance</button>
+  <button class="tab" data-tab="tests" onclick="showTab('tests')"><span class="ico">◎</span>Tests</button>
+  <button class="tab" data-tab="settings" onclick="showTab('settings')"><span class="ico">⚙</span>Réglages</button>
+</div>
+</nav>
+</div>
+
+<script>
+const KEY='muscu-coach-v2';
+const defaultState={
+  bodyWeight:70, week:0,
+  tests:[
+    {id:1,ex:'Développé couché',load:75,reps:3,rir:0,bw:null},
+    {id:2,ex:'Développé militaire',load:45,reps:4,rir:0,bw:null},
+    {id:3,ex:'Tractions lestées',load:15,reps:4,rir:0,bw:70}
+  ],
+  history:[],
+  workLoads:{
+    'Développé incliné haltères':22,
+    'Chest press':40
+  }
+};
+let state=load();
+
+const exercises=[
+'Développé couché','Développé militaire','Tractions lestées','Squat','Hack squat','Soulevé de terre roumain','Rowing lourd'
+];
+
+const program=[
+ {day:'Lundi',name:'Pectoraux + épaules A',focus:'Lourd / tension', ex:[
+  E('Développé couché',4,'6–8',2,'principal'), E('Développé incliné haltères',3,'8–10',2),
+  E('Chest press',3,'10–12',1.5), E('Écartés poulie',2,'12–15',1.5),
+  E('Développé militaire',3,'6–10',2,'principal'), E('Élévations latérales',4,'12–20',1.5), E('Reverse pec-deck',3,'15–20',1.5)
+ ]},
+ {day:'Mardi',name:'Jambes A',focus:'Quadriceps / lourd', ex:[
+  E('Squat / Hack squat',4,'6–8',2,'principal'),E('Presse à cuisses',3,'8–12',2),E('Fentes bulgares',3,'8–12 / jambe',2),
+  E('Leg extension',3,'12–15',1.5),E('Leg curl',3,'10–15',1.5),E('Mollets',4,'10–15',1.5)
+ ]},
+ {day:'Mercredi',name:'Dos + bras A',focus:'Lourd / tension', ex:[
+  E('Tractions lestées',4,'6–8',2,'principal'),E('Rowing poitrine appuyée',4,'6–10',2),E('Tirage vertical neutre',3,'8–12',2),
+  E('Rowing unilatéral poulie basse',3,'10–12',1.5),E('Pullover poulie',2,'12–15',1.5),
+  E('Curl EZ',3,'8–10',1.5,'superset A'),E('Extension triceps poulie',3,'8–10',1.5,'superset A'),
+  E('Curl incliné',3,'10–12',1.5,'superset B'),E('Extension triceps au-dessus tête',3,'10–12',1.5,'superset B'),
+  E('Curl poulie',2,'12–15',1.5,'superset C'),E('Pushdown corde',2,'12–15',1.5,'superset C')
+ ]},
+ {day:'Jeudi',name:'Pectoraux + épaules B',focus:'Volume / congestion', ex:[
+  E('Développé incliné haltères',3,'8–12',2),E('Développé couché haltères',3,'8–12',2),
+  E('Chest press déclinée / dips',3,'8–12',1.5),E('Écartés poulie haute → basse',3,'12–15',1.5),
+  E('Élévations latérales haltères',4,'12–20',1.5),E('Élévations latérales poulie',3,'12–20',1.5),E('Reverse pec-deck',3,'15–20',1.5)
+ ]},
+ {day:'Vendredi',name:'Jambes B',focus:'Chaîne postérieure / volume', ex:[
+  E('Soulevé de terre roumain',4,'6–10',2,'principal'),E('Hack squat',3,'8–12',2),E('Hip thrust',3,'8–12',2),
+  E('Leg curl assis',4,'10–15',1.5),E('Presse pieds hauts',2,'10–15',2),E('Leg extension',2,'12–20',1.5),E('Mollets',4,'12–20',1.5)
+ ]},
+ {day:'Samedi',name:'Dos + bras B',focus:'Volume / congestion', ex:[
+  E('Tirage vertical',3,'8–12',2),E('Rowing machine',3,'8–12',2),E('Rowing unilatéral',3,'10–15',1.5),E('Pullover',3,'12–15',1.5),E('Reverse fly',3,'15–20',1.5),
+  E('Curl pupitre',3,'10–12',1.5,'superset A'),E('Extension triceps au-dessus tête',3,'10–12',1.5,'superset A'),
+  E('Curl marteau',3,'10–15',1.5,'superset B'),E('Pushdown corde',3,'10–15',1.5,'superset B'),
+  E('Curl poulie',2,'12–15',1.5,'superset C'),E('Extension triceps unilatérale',2,'12–15',1.5,'superset C')
+ ]}
+];
+
+function E(name,sets,reps,rir,tag=''){return {name,sets,reps,rir,tag}}
+function load(){try{return {...defaultState,...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch{return structuredClone(defaultState)}}
+function persist(){localStorage.setItem(KEY,JSON.stringify(state))}
+function block(){
+ const w=state.week;
+ if(w===0)return['Calibration','CAL'];
+ if(w<=4)return['Hypertrophie fondamentale','HYP'];
+ if(w===5)return['Deload','DEL'];
+ if(w<=9)return['Force','FOR'];
+ if(w===10)return['Recalibrage','REC'];
+ if(w<=14)return['Hypertrophie lourde','HYP+'];
+ if(w===15)return['Deload','DEL'];
+ if(w<=19)return['Volume / congestion','VOL'];
+ return['Tests finaux','TEST'];
+}
+function e1rm(t){
+ let total=t.load;
+ if(t.ex==='Tractions lestées') total=(t.bw||state.bodyWeight)+t.load;
+ return Math.round(total*(1+t.reps/30)*10)/10;
+}
+function latestTest(name){return [...state.tests].reverse().find(t=>t.ex===name)}
+function recCharge(ex){
+ if(state.workLoads[ex.name]) return state.workLoads[ex.name];
+ let t=latestTest(ex.name);
+ if(!t)return null;
+ if(ex.name==='Tractions lestées') return Math.max(0,Math.round((t.load*.65)*2)/2);
+ return Math.round((e1rm(t)*.70)/2.5)*2.5;
+}
+function renderHeader(){
+ const [b]=block();document.getElementById('phaseLabel').textContent=`Semaine ${state.week} · ${b}`;
+ document.getElementById('weekBadge').textContent=`S${state.week}`;
+}
+function todayIndex(){
+ const js=new Date().getDay(); // 0 sunday
+ return Math.min(5,Math.max(0,js-1));
+}
+function renderHome(){
+ const p=program[todayIndex()];
+ todayName.textContent=p.name;todayFocus.textContent=p.focus;
+ homeTests.innerHTML=state.tests.slice(-4).reverse().map(t=>`<div class="testrow"><div class="row"><b>${t.ex}</b><span class="good">${t.load}${t.ex==='Tractions lestées'?' kg lest':' kg'} × ${t.reps}</span></div><div class="small">RIR ${t.rir} · e1RM ${e1rm(t)} kg</div></div>`).join('');
+}
+function phasePrescription(ex){
+ let sets=ex.sets,reps=ex.reps,rir=ex.rir,note='';
+ const w=state.week;
+ if(w>=6&&w<=9&&ex.tag==='principal'){
+   const t=latestTest(ex.name); const er=t?e1rm(t):null;
+   const idx=w-6, plan=[{s:4,r:'5',p:.785},{s:5,r:'4',p:.815},{s:5,r:'3',p:.855},{s:1,r:'3 top set',p:.885}][idx];
+   sets=plan.s;reps=plan.r;rir=idx===3?1:2;
+   if(er) note=`${Math.round(er*plan.p/2.5)*2.5} kg prévu`;
+ } else if(w===5||w===15){sets=Math.max(2,Math.ceil(ex.sets*.5));rir=4;note='Deload'}
+ else if(w>=11&&w<=14&&ex.tag==='principal'){note='Top set + back-off';reps='6–10';rir=1}
+ else if(w>=16&&w<=19){note=ex.tag.includes('superset')?'Superset':(ex.sets<=3?'Dernière série intensifiée':'Volume');}
+ return {sets,reps,rir,note};
+}
+function renderProgram(){
+ days.innerHTML=program.map((p,i)=>{
+  const exs=p.ex.map(ex=>{
+   const pr=phasePrescription(ex), ch=recCharge(ex);
+   return `<div class="exercise ${ex.tag.includes('superset')?'superset':''}">
+     <div class="exname">${ex.name}</div>
+     <div class="meta">
+       <span class="pill">${pr.sets} séries</span><span class="pill">${pr.reps} reps</span><span class="pill">RIR ${pr.rir}</span>
+       ${ch!=null?`<span class="pill charge">${ch} kg conseillé</span>`:''}
+       ${ex.tag.includes('superset')?`<span class="pill">${ex.tag}</span>`:''}
+       ${pr.note?`<span class="pill">${pr.note}</span>`:''}
+     </div>
+   </div>`;
+  }).join('');
+  return `<div class="card day" id="day${i}" onclick="toggleDay(${i},event)">
+    <div class="dayhead"><div><div class="small">${p.day}</div><div class="title">${p.name}</div><div class="sub">${p.focus}</div></div><div class="chev">›</div></div>
+    <div class="details">${exs}<button class="btn primary" style="width:100%;margin-top:8px" onclick="event.stopPropagation();startWorkout(${i})">Démarrer cette séance</button></div>
+  </div>`;
+ }).join('');
+}
+function toggleDay(i,e){ if(e.target.closest('.btn'))return; document.getElementById('day'+i).classList.toggle('open') }
+function startWorkout(i){
+ currentWorkout=i; const p=program[i];woTitle.textContent=p.name;woFocus.textContent=p.focus;
+ woExercises.innerHTML=p.ex.map((ex,ei)=>{
+  const pr=phasePrescription(ex), ch=recCharge(ex)||0;
+  let rows='';for(let s=1;s<=pr.sets;s++) rows+=`<div class="workout-set">
+   <div class="setlabel">Série ${s}</div>
+   <div><label>Charge</label><input data-ex="${ei}" data-set="${s}" data-k="load" type="number" step=".5" value="${ch}"></div>
+   <div><label>Reps</label><input data-ex="${ei}" data-set="${s}" data-k="reps" type="number" value="${String(pr.reps).match(/\d+/)?.[0]||8}"></div>
+   <div><label>RIR</label><input data-ex="${ei}" data-set="${s}" data-k="rir" type="number" min="0" max="5" value="${pr.rir}"></div></div>`;
+  return `<div class="card"><div class="exname">${ex.name}</div><div class="small">${pr.sets} × ${pr.reps} · RIR ${pr.rir}${ex.tag.includes('superset')?' · '+ex.tag:''}</div>
+  ${ch?`<div class="pill charge" style="margin-top:8px">Charge de départ proposée : ${ch} kg</div>`:''}${rows}</div>`
+ }).join('');
+ showTab('workout');
+}
+let currentWorkout=todayIndex();
+function openToday(){startWorkout(todayIndex())}
+function finishWorkout(){
+ const p=program[currentWorkout], log={date:new Date().toISOString(),day:p.day,name:p.name,sets:[]};
+ document.querySelectorAll('#woExercises input[data-ex]').forEach(inp=>{
+   const exi=+inp.dataset.ex,set=+inp.dataset.set,key=inp.dataset.k;
+   let row=log.sets.find(x=>x.exi===exi&&x.set===set); if(!row){row={exi,set,name:p.ex[exi].name};log.sets.push(row)}
+   row[key]=+inp.value;
+ });
+ state.history.push(log);
+ // learn latest working load from last completed sets
+ p.ex.forEach((ex,ei)=>{
+   const vals=log.sets.filter(x=>x.exi===ei); if(vals.length) state.workLoads[ex.name]=vals[0].load;
+ });
+ persist();alert('Séance enregistrée ✅');renderAll();showTab('home');
+}
+function renderTests(){
+ testEx.innerHTML=exercises.map(x=>`<option>${x}</option>`).join('');
+ testBw.value=state.bodyWeight;
+ testList.innerHTML=state.tests.slice().reverse().map(t=>`<div class="card">
+  <div class="row"><div><b>${t.ex}</b><div class="small">${t.load}${t.ex==='Tractions lestées'?' kg de lest':' kg'} × ${t.reps} · RIR ${t.rir}</div></div><div class="badge">e1RM ${e1rm(t)}</div></div>
+  <div class="testactions"><button class="btn ghost" onclick="editTest(${t.id})">Modifier</button><button class="btn danger" onclick="deleteTest(${t.id})">Supprimer</button></div>
+ </div>`).join('');
+}
+function saveTest(){
+ const t={id:Date.now(),ex:testEx.value,load:+testLoad.value||0,reps:+testReps.value||1,rir:+testRir.value||0,bw:+testBw.value||state.bodyWeight};
+ state.tests.push(t);persist();renderAll();
+ testLoad.value='';testReps.value='';testRir.value='';
+}
+function editTest(id){
+ const t=state.tests.find(x=>x.id===id);if(!t)return;
+ const load=prompt(`Charge / lest pour ${t.ex}`,t.load); if(load===null)return;
+ const reps=prompt('Répétitions',t.reps); if(reps===null)return;
+ const rir=prompt('RIR',t.rir); if(rir===null)return;
+ t.load=+load;t.reps=+reps;t.rir=+rir;
+ if(t.ex==='Tractions lestées'){const bw=prompt('Poids du corps',t.bw||state.bodyWeight);if(bw!==null)t.bw=+bw}
+ persist();renderAll();
+}
+function deleteTest(id){if(confirm('Supprimer cette référence ?')){state.tests=state.tests.filter(x=>x.id!==id);persist();renderAll()}}
+function saveSettings(){state.bodyWeight=+bodyWeight.value||70;state.week=+weekInput.value||0;persist();renderAll()}
+function renderSettings(){bodyWeight.value=state.bodyWeight;weekInput.value=state.week}
+function showTab(id){
+ document.querySelectorAll('main section').forEach(s=>s.classList.add('hidden'));
+ document.getElementById(id).classList.remove('hidden');
+ document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
+}
+function renderAll(){renderHeader();renderHome();renderProgram();renderTests();renderSettings()}
+renderAll();
+</script>
+</body>
+</html>
