@@ -1,0 +1,8 @@
+{
+  "name":"muscu-coach-cloud",
+  "version":"4.0.0",
+  "private":true,
+  "type":"module",
+  "scripts":{"build":"node build.mjs","start":"npx --yes serve dist"},
+  "engines":{"node":">=22"}
+}
