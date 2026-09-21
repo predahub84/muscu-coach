@@ -9,7 +9,7 @@ if(key&&!key.startsWith('sb_publishable_')){
   if(role!=='anon')throw new Error('Utilise une clé publique publishable ou anon, jamais une clé secrète/service_role.');
 }
 await rm('dist',{recursive:true,force:true});await mkdir('dist',{recursive:true});
-const files=['accueil.html','experience.css','profile.js','index.html','connexion.html','auth.css','auth.js','app.css','app.js','cloud.js','cloud.css','manifest.webmanifest','icon-192.png','icon-512.png','apple-touch-icon.png','supabase.js','THIRD_PARTY_NOTICES.txt'];
+const files=['accueil.html','experience.css','profile.js','nutrition.js','nutrition.css','barcode.js','index.html','connexion.html','auth.css','auth.js','app.css','app.js','cloud.js','cloud.css','manifest.webmanifest','icon-192.png','icon-512.png','apple-touch-icon.png','supabase.js','THIRD_PARTY_NOTICES.txt'];
 for(const file of files)await copyFile(file,'dist/'+file);
 await writeFile('dist/config.js','window.COACH_CONFIG = '+JSON.stringify({supabaseUrl:url.replace(/\/$/,''),supabasePublishableKey:key})+';\n');
 const hash=createHash('sha256');for(const file of [...files,'config.js'])hash.update(await readFile('dist/'+file));

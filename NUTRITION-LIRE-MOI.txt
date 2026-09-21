@@ -1,0 +1,35 @@
+MUSCU COACH — MISE À JOUR ACCUEIL, PROFIL ET NUTRITION
+
+Ce ZIP contient les fichiers à ajouter/remplacer à la racine du dépôt
+predahub84/muscu-coach, à côté de index.html. Il complète le projet existant.
+Ne supprime pas les autres fichiers. Aucun secret Google n'est nécessaire.
+
+1. Décompresse le ZIP dans Fichiers sur iPhone.
+2. GitHub : dépôt muscu-coach > Add file / Upload files.
+3. Sélectionne les fichiers décompressés, puis Commit changes.
+4. Attends la fin du déploiement Vercel. Ferme les onglets de l'app et l'app
+   installée, puis ouvre de nouveau le site pour activer la nouvelle version.
+
+NUTRITION
+- Journal par date et par repas ; quantités en grammes ou millilitres.
+- Calories, protéines, glucides et lipides calculés selon la portion.
+- Objectifs librement renseignés ; favoris, 30 aliments récents, repas enregistrés.
+- Recherche Open Food Facts et scan de codes-barres à la caméra.
+- Si la caméra est indisponible, saisie du code-barres ou saisie manuelle.
+- Vérifie les valeurs par 100 g / 100 ml sur l'emballage, surtout les boissons.
+  Une valeur absente doit être complétée : elle n'est pas assimilée à zéro.
+- Les recherches nécessitent Internet. La saisie manuelle et les aliments déjà
+  enregistrés sont disponibles hors connexion après le premier chargement.
+- Nutrition utilise le carnet existant. Connecté : synchronisation Supabase
+  avec le même statut que les séances. Invité : sauvegarde sur cet appareil.
+- La progression sportive est dans Profil > Progression sur mobile.
+
+VALIDATION
+Construction réussie ; tests automatisés des portions, modification, dates,
+favoris, repas, persistance, séparation des comptes et synchronisation simulée.
+Recherche et scanner testés avec réponses simulées ; endpoint public accessible.
+La caméra réelle iPhone et le parcours Google réel restent à vérifier après
+déploiement : ces tests nécessitent ton appareil et ta session.
+
+Aucune migration SQL et aucune modification des identifiants n'est requise.
+Open Food Facts et ZXing : licences dans THIRD_PARTY_NOTICES.txt.
