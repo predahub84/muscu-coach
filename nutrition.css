@@ -3,3 +3,5 @@
 #foodVideo{display:block;height:auto;max-height:none;cursor:crosshair}#foodFocusStatus{font-size:13px;line-height:1.5;color:#bdbdcc}
 
 .food-slot-row{padding:16px 0;border-bottom:1px solid #363741}.food-slot-row b{display:block;overflow-wrap:anywhere}.food-slot-row>div{display:flex;flex-wrap:wrap;gap:6px}.food-slot-list{margin-bottom:20px}.food-text:disabled{opacity:.35;cursor:default}
+
+.food-portion{border:1px solid #444550;border-radius:14px;padding:16px;min-width:0}.food-portion legend{color:#ff9368;padding:0 7px;font-weight:700}.food-portion p{font-size:13px;line-height:1.5}.food-shortcuts{margin:0}.food-shortcuts .btn{flex:1}#foodQuantityPreview{color:#ffab85;font-weight:600;margin:0}.food-form [hidden]{display:none!important}
