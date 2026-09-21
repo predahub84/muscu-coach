@@ -2,6 +2,8 @@
 (async()=>{
  const button=document.getElementById('googleLogin'),feedback=document.getElementById('authFeedback');
  const fail=message=>{feedback.textContent=message;button.disabled=false};
+ const mode=new URL(location.href).searchParams.get('mode');
+ document.querySelector('.auth-panel h2').textContent=mode==='signup'?'Crée ton espace.':'Heureux de te retrouver.';
  const cfg=window.COACH_CONFIG||{};
  if(!cfg.supabaseUrl||!cfg.supabasePublishableKey){button.disabled=true;feedback.textContent='La connexion n’est pas encore configurée. Ton carnet local reste disponible.';return}
  const client=window.SupabaseSDK.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,flowType:'pkce'},global:{fetch:(url,options={})=>fetch(url,{...options,signal:options.signal||AbortSignal.timeout(15000)})}});
