@@ -1,18 +1,25 @@
 (function(global){
 'use strict';
 
-const VERSION='1.0.0';
+const VERSION='1.1.0';
+/*
+ * Les facteurs ci-dessous décrivent uniquement la vie quotidienne HORS entraînement.
+ * Les séances de musculation sont ajoutées séparément pour éviter le double comptage.
+ */
 const ACTIVITY_FACTORS={
-  low:{label:'Plutôt sédentaire',factor:1.35},
-  moderate:{label:'Actif au quotidien',factor:1.50},
-  high:{label:'Très actif',factor:1.65},
-  very_high:{label:'Travail physique / très gros volume',factor:1.80}
+  low:{label:'Sédentaire hors entraînement',factor:1.20},
+  moderate:{label:'Un peu actif hors entraînement',factor:1.30},
+  high:{label:'Actif physiquement au quotidien',factor:1.45},
+  very_high:{label:'Métier très physique / beaucoup de marche',factor:1.60}
 };
 const SEX_OFFSETS={male:5,female:-161,other:-78,prefer_not:-78};
 const GAIN_PACE_PCT={controlled:0.25,normal:0.50,aggressive:0.75};
+const KCAL_PER_KG_BODYWEIGHT_CHANGE=7700;
 const roundTo=(value,step)=>Math.round(value/step)*step;
+const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 const finite=(v,min=-Infinity,max=Infinity)=>typeof v==='number'&&Number.isFinite(v)&&v>=min&&v<=max;
 const clone=v=>JSON.parse(JSON.stringify(v));
+const isoDate=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&Number.isFinite(Date.parse(v+'T12:00:00Z'));
 
 function normalizeProfile(raw={}){
   return {
@@ -46,44 +53,112 @@ function calculateBmr(profile){
   return 10*p.currentWeightKg+6.25*p.heightCm-5*p.ageYears+(SEX_OFFSETS[p.sex]??SEX_OFFSETS.prefer_not);
 }
 
+function dateDiffDays(startDate,targetDate){
+  if(!isoDate(startDate)||!isoDate(targetDate))return null;
+  return (Date.parse(targetDate+'T12:00:00Z')-Date.parse(startDate+'T12:00:00Z'))/86400000;
+}
+
+function calculateGoalTimeline(profile,goal={}){
+  const p=normalizeProfile(profile);
+  const current=Number(goal.currentWeightKg||p.currentWeightKg),target=Number(goal.targetWeightKg),paceKey=GAIN_PACE_PCT[goal.gainPacePreset]?goal.gainPacePreset:'normal';
+  const selectedPct=finite(Number(goal.targetBodyweightPctPerWeek),0.05,3)?Number(goal.targetBodyweightPctPerWeek):GAIN_PACE_PCT[paceKey];
+  const startDate=String(goal.startDate||new Date().toISOString().slice(0,10)),targetDate=goal.targetDate?String(goal.targetDate):null;
+  const gainKg=finite(target,30,350)&&finite(current,30,300)?Math.max(0,target-current):0;
+  let exactWeeks=null,horizonWeeks=null,requiredKgPerWeek=null,requiredPctPerWeek=null,source='pace';
+  if(targetDate&&isoDate(startDate)&&isoDate(targetDate)){
+    const days=dateDiffDays(startDate,targetDate);
+    if(days!=null&&days>0){
+      exactWeeks=days/7;
+      horizonWeeks=clamp(Math.ceil(days/7),1,52);
+      requiredKgPerWeek=gainKg/exactWeeks;
+      requiredPctPerWeek=current>0?requiredKgPerWeek/current*100:null;
+      source='target_date';
+    }
+  }
+  if(horizonWeeks==null){
+    const selectedKgPerWeek=current*selectedPct/100;
+    horizonWeeks=clamp(Math.ceil(gainKg/Math.max(0.05,selectedKgPerWeek)),4,52);
+    exactWeeks=horizonWeeks;
+    requiredKgPerWeek=gainKg/Math.max(1,exactWeeks);
+    requiredPctPerWeek=current>0?requiredKgPerWeek/current*100:null;
+  }
+  const ratio=selectedPct>0&&requiredPctPerWeek!=null?requiredPctPerWeek/selectedPct:1;
+  let feasibility='aligned',feasibilityMessage='Le rythme demandé est cohérent avec le réglage choisi.';
+  if(requiredPctPerWeek!=null&&requiredPctPerWeek>1.25){
+    feasibility='very_aggressive';
+    feasibilityMessage=`L’échéance demande environ ${requiredKgPerWeek.toFixed(2)} kg/semaine (${requiredPctPerWeek.toFixed(2)} % du poids/semaine). C’est une trajectoire de poids total très agressive, pas une promesse de prise de muscle.`;
+  }else if(ratio>1.35){
+    feasibility='aggressive';
+    feasibilityMessage=`L’échéance demande environ ${requiredKgPerWeek.toFixed(2)} kg/semaine, au-dessus du rythme « ${paceKey} » sélectionné.`;
+  }
+  return {
+    source,startDate,targetDate,currentWeightKg:current,targetWeightKg:target,gainKg:Number(gainKg.toFixed(3)),
+    exactWeeks:Number(exactWeeks.toFixed(3)),horizonWeeks,
+    selectedBodyweightPctPerWeek:Number(selectedPct.toFixed(3)),
+    requiredKgPerWeek:Number(requiredKgPerWeek.toFixed(3)),
+    requiredBodyweightPctPerWeek:Number(requiredPctPerWeek.toFixed(3)),
+    feasibility,feasibilityMessage
+  };
+}
+
+function estimateTrainingCaloriesPerDay(profile,goal={}){
+  const p=normalizeProfile(profile),days=clamp(Math.round(Number(goal.daysPerWeek||0)),0,7),maxMinutes=clamp(Number(goal.maxSessionMinutes||0),0,180);
+  if(!days||!maxMinutes)return {dailyKcal:0,weeklyKcal:0,effectiveMinutesPerSession:0,met:5};
+  // La durée saisie est un maximum : on estime 80 % de ce créneau comme temps réellement actif.
+  const effectiveMinutes=Math.min(90,maxMinutes*0.80),met=5;
+  // Calories nettes au-dessus du repos : (MET - 1) × 3.5 × kg / 200 × minutes.
+  const sessionKcal=(met-1)*3.5*p.currentWeightKg/200*effectiveMinutes;
+  const weeklyKcal=sessionKcal*days;
+  return {dailyKcal:weeklyKcal/7,weeklyKcal,effectiveMinutesPerSession:effectiveMinutes,met};
+}
+
 function calculateInitialNutritionTarget(profile,goal={}){
   const check=validateProfile(profile);
   if(!check.ok)return {status:'blocked',errors:check.errors};
   const p=check.value,paceKey=GAIN_PACE_PCT[goal.gainPacePreset]?goal.gainPacePreset:'normal';
-  const pct=Number(goal.targetBodyweightPctPerWeek||GAIN_PACE_PCT[paceKey]);
+  const timeline=calculateGoalTimeline(p,{...goal,gainPacePreset:paceKey});
   const bmr=calculateBmr(p),factor=ACTIVITY_FACTORS[p.activityLevel].factor;
-  const tdee=bmr*factor;
-  const kgPerWeek=p.currentWeightKg*pct/100;
-  const surplus=Math.max(150,Math.min(650,kgPerWeek*7700/7));
+  const nonTrainingTdee=bmr*factor;
+  const training=estimateTrainingCaloriesPerDay(p,goal);
+  const tdee=nonTrainingTdee+training.dailyKcal;
+  const theoreticalSurplus=Math.max(0,timeline.requiredKgPerWeek*KCAL_PER_KG_BODYWEIGHT_CHANGE/7);
+  // La cible suit réellement l’objectif/date. Un garde-fou technique évite seulement les valeurs aberrantes.
+  const surplus=clamp(theoreticalSurplus,150,2500);
   const calories=roundTo(tdee+surplus,25);
   const protein=roundTo(p.currentWeightKg*2.0,5);
-  const fatFromCalories=calories*0.25/9;
-  const fat=roundTo(Math.max(p.currentWeightKg*0.8,fatFromCalories),5);
+  const fat=roundTo(clamp(calories*0.22/9,p.currentWeightKg*0.8,p.currentWeightKg*1.2),5);
   const carbs=roundTo(Math.max(50,(calories-protein*4-fat*9)/4),5);
   const confidence=(p.sex==='male'||p.sex==='female')?'estimated':'low';
   return {
     status:'calculated',
     id:global.crypto?.randomUUID?.()||('nutrition-'+Date.now()),
-    effectiveFrom:new Date().toISOString().slice(0,10),
+    effectiveFrom:timeline.startDate,
     goalType:'mass_gain',
     caloriesKcal:calories,
     proteinG:protein,
     carbsG:carbs,
     fatG:fat,
-    estimatedBmrKcal:Math.round(bmr),
-    estimatedTdeeKcal:Math.round(tdee),
+    estimatedBmrKcal:roundTo(bmr,25),
+    estimatedTdeeKcal:roundTo(tdee,25),
+    estimatedNonTrainingTdeeKcal:roundTo(nonTrainingTdee,25),
+    estimatedTrainingKcalPerDay:roundTo(training.dailyKcal,25),
     plannedSurplusKcal:Math.round(calories-tdee),
-    targetBodyweightPctPerWeek:Number(pct.toFixed(3)),
-    targetKgPerWeek:Number(kgPerWeek.toFixed(3)),
-    calculationMethod:'mifflin_st_jeor_activity_surplus_v1',
+    theoreticalSurplusKcal:Math.round(theoreticalSurplus),
+    targetBodyweightPctPerWeek:timeline.requiredBodyweightPctPerWeek,
+    targetKgPerWeek:timeline.requiredKgPerWeek,
+    selectedBodyweightPctPerWeek:timeline.selectedBodyweightPctPerWeek,
+    horizonWeeks:timeline.horizonWeeks,
+    goalFeasibility:timeline.feasibility,
+    goalFeasibilityMessage:timeline.feasibilityMessage,
+    calculationMethod:'mifflin_daily_activity_plus_training_goal_timeline_v2',
     confidence,
-    sourceInputs:{profile:clone(p),activityFactor:factor,gainPacePreset:paceKey},
+    sourceInputs:{profile:clone(p),activityFactor:factor,gainPacePreset:paceKey,timeline:clone(timeline),trainingEstimate:clone(training)},
     generatedAt:new Date().toISOString()
   };
 }
 
 function adjustNutritionTarget(currentTarget,{previousAverageWeightKg,currentAverageWeightKg,adherencePct=100}={},goal={}){
-  if(!currentTarget||!finite(Number(currentTarget.caloriesKcal),500,10000))return {status:'blocked',reason:'missing_target'};
+  if(!currentTarget||!finite(Number(currentTarget.caloriesKcal),500,12000))return {status:'blocked',reason:'missing_target'};
   if(!finite(Number(previousAverageWeightKg),30,300)||!finite(Number(currentAverageWeightKg),30,300))return {status:'maintain',deltaKcal:0,reason:'Deux moyennes de poids sont nécessaires.'};
   const actualPct=(Number(currentAverageWeightKg)/Number(previousAverageWeightKg)-1)*100;
   const targetPct=Number(goal.targetBodyweightPctPerWeek||currentTarget.targetBodyweightPctPerWeek||0.5);
@@ -95,5 +170,5 @@ function adjustNutritionTarget(currentTarget,{previousAverageWeightKg,currentAve
   const next=clone(currentTarget);next.id=global.crypto?.randomUUID?.()||('nutrition-'+Date.now());next.effectiveFrom=new Date().toISOString().slice(0,10);next.caloriesKcal=roundTo(Number(currentTarget.caloriesKcal)+delta,25);next.carbsG=roundTo(Math.max(50,(next.caloriesKcal-Number(next.proteinG)*4-Number(next.fatG)*9)/4),5);next.generatedAt=new Date().toISOString();next.adjustment={deltaKcal:delta,actualBodyweightPctPerWeek:Number(actualPct.toFixed(3)),targetBodyweightPctPerWeek:targetPct,adherencePct:Number(adherencePct),reason};return {status:delta===0?'maintain':'adjusted',deltaKcal:delta,reason,nextTarget:next};
 }
 
-global.MuscuCoachProfile=Object.freeze({VERSION,ACTIVITY_FACTORS,GAIN_PACE_PCT,normalizeProfile,validateProfile,calculateBmr,calculateInitialNutritionTarget,adjustNutritionTarget});
+global.MuscuCoachProfile=Object.freeze({VERSION,ACTIVITY_FACTORS,GAIN_PACE_PCT,normalizeProfile,validateProfile,calculateBmr,calculateGoalTimeline,estimateTrainingCaloriesPerDay,calculateInitialNutritionTarget,adjustNutritionTarget});
 })(typeof window!=='undefined'?window:globalThis);

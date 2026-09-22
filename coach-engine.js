@@ -145,10 +145,10 @@ function generateMassGainProgram(raw,{catalog=[]}={}){
   const fingerprint=hash(JSON.stringify({goal:input.goal,trainingProfile:input.trainingProfile,availability:input.availability,constraints:input.constraints,planning:input.planning,catalog:[...cMap.values()].map(x=>x.exerciseId)}));
   const program={
     schemaVersion:D.SCHEMA_VERSION,id:input.planning.existingProgramId||`program_${fingerprint}`,revision:1,status:'generated',generator:{name:'mass-gain-rules',version:'1.0.0',ai:false,rulesetVersion:'1.0.0'},
-    generatedAt:new Date().toISOString(),inputSnapshot:clone(input),goalSnapshot:{type:'mass_gain',currentWeightKg:input.goal.currentWeightKg,targetWeightKg:input.goal.targetWeightKg,targetDate:input.goal.targetDate,gainPace:input.goal.gainPace,musclePriorities:input.goal.musclePriorities},
+    generatedAt:new Date().toISOString(),inputSnapshot:clone(input),goalSnapshot:{type:'mass_gain',currentWeightKg:input.goal.currentWeightKg,targetWeightKg:input.goal.targetWeightKg,targetDate:input.goal.targetDate,gainPace:input.goal.gainPace,requiredBodyweightPctPerWeek:input.goal.requiredBodyweightPctPerWeek||null,requiredKgPerWeek:input.goal.requiredKgPerWeek||null,musclePriorities:input.goal.musclePriorities},
     assumptions:['Salle complète disponible.','Les charges ne sont transférées automatiquement qu’entre occurrences du même exerciseId.'],warnings,blocks,weeks,
     progressionPolicies:clone(D.progressionPolicies),calibrationPolicy:clone(D.calibrationPolicy),adaptationPolicy:{id:'weekly-adaptation-v1',version:'1.0.0',rules:['prefer_small_changes','protect_exercise_identity','respect_explicit_exclusions','deload_before_adding_fatigue']},
-    nutritionContext:{goal:'mass_gain',targetBodyweightPctPerWeek:input.goal.gainPace.targetBodyweightPctPerWeek,targetKgPerWeek:input.goal.gainPace.targetKgPerWeek,caloriesManagedSeparately:true}
+    nutritionContext:{goal:'mass_gain',targetBodyweightPctPerWeek:input.goal.requiredBodyweightPctPerWeek||input.goal.gainPace.targetBodyweightPctPerWeek,targetKgPerWeek:input.goal.requiredKgPerWeek||input.goal.gainPace.targetKgPerWeek,selectedBodyweightPctPerWeek:input.goal.gainPace.targetBodyweightPctPerWeek,caloriesManagedSeparately:true}
   };
   const valid=D.validateGeneratedProgram(program);if(!valid.ok)return {status:'blocked',schemaVersion:D.SCHEMA_VERSION,errors:valid.errors,warnings};
   return program;

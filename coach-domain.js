@@ -55,6 +55,19 @@ function normalizePriorities(list){
   return out.sort((a,b)=>a.rank-b.rank||b.importance-a.importance);
 }
 
+function deriveHorizonWeeks(input){
+  const current=Number(input.goal?.currentWeightKg||input.user?.weightKg),target=Number(input.goal?.targetWeightKg),startDate=input.availability?.startDate,targetDate=input.goal?.targetDate;
+  if(isoDate(startDate)&&isoDate(targetDate)){
+    const days=(Date.parse(targetDate+'T12:00:00Z')-Date.parse(startDate+'T12:00:00Z'))/86400000;
+    if(days>0)return Math.max(1,Math.min(52,Math.ceil(days/7)));
+  }
+  if(finite(current,30,300)&&finite(target,30,350)&&target>current){
+    const pct=Number(input.goal?.gainPace?.targetBodyweightPctPerWeek||GAIN_PACE_PRESETS.normal.targetBodyweightPctPerWeek),kgPerWeek=Math.max(0.05,current*pct/100);
+    return Math.max(4,Math.min(52,Math.ceil((target-current)/kgPerWeek)));
+  }
+  return int(input.planning?.requestedHorizonWeeks,1,52)?input.planning.requestedHorizonWeeks:20;
+}
+
 function normalizeMassGainGenerationInput(raw){
   const input=isObject(raw)?clone(raw):{};
   input.schemaVersion=input.schemaVersion||SCHEMA_VERSION;
@@ -88,7 +101,7 @@ function normalizeMassGainGenerationInput(raw){
   input.performanceReferences=Array.isArray(input.performanceReferences)?input.performanceReferences:[];
   input.trainingHistory=Array.isArray(input.trainingHistory)?input.trainingHistory:[];
   input.planning=isObject(input.planning)?input.planning:{};
-  input.planning.requestedHorizonWeeks=int(input.planning.requestedHorizonWeeks,4,52)?input.planning.requestedHorizonWeeks:20;
+  input.planning.requestedHorizonWeeks=deriveHorizonWeeks(input);
   input.planning.allowStrengthBlocks=input.planning.allowStrengthBlocks!==false;
   input.planning.existingProgramId=input.planning.existingProgramId||null;
   return input;
@@ -116,9 +129,12 @@ function validateMassGainGenerationInput(raw){
     const start=new Date(value.availability.startDate+'T12:00:00Z'),target=new Date(value.goal.targetDate+'T12:00:00Z'),weeks=(target-start)/604800000;
     if(weeks<=0)errors.push({path:'goal.targetDate',code:'target_date_before_start',message:'La date cible doit être postérieure au début du programme.'});
     else{
-      const requiredPct=(Math.pow(value.goal.targetWeightKg/value.goal.currentWeightKg,1/weeks)-1)*100;
+      const requiredKgPerWeek=(value.goal.targetWeightKg-value.goal.currentWeightKg)/weeks;
+      const requiredPct=requiredKgPerWeek/value.goal.currentWeightKg*100;
+      value.goal.requiredKgPerWeek=Number(requiredKgPerWeek.toFixed(3));
       value.goal.requiredBodyweightPctPerWeek=Number(requiredPct.toFixed(3));
-      if(requiredPct>value.goal.gainPace.targetBodyweightPctPerWeek*1.35)warnings.push({path:'goal.targetDate',code:'target_date_aggressive',message:`La date cible demanderait environ ${requiredPct.toFixed(2)} % du poids corporel par semaine, au-dessus du rythme choisi (${value.goal.gainPace.targetBodyweightPctPerWeek.toFixed(2)} %).`});
+      if(requiredPct>1.25)warnings.push({path:'goal.targetDate',code:'target_date_very_aggressive',message:`La date cible demande environ ${requiredKgPerWeek.toFixed(2)} kg/semaine (${requiredPct.toFixed(2)} % du poids/semaine). C’est une trajectoire de poids total très agressive, pas une promesse de prise de muscle.`});
+      else if(requiredPct>value.goal.gainPace.targetBodyweightPctPerWeek*1.35)warnings.push({path:'goal.targetDate',code:'target_date_aggressive',message:`La date cible demanderait environ ${requiredPct.toFixed(2)} % du poids corporel par semaine, au-dessus du rythme choisi (${value.goal.gainPace.targetBodyweightPctPerWeek.toFixed(2)} %).`});
     }
   }
   if(value.constraints.reportedIssues.length&&value.constraints.healthStatus==='managed'&&!value.constraints.excludedExerciseIds.length&&!value.constraints.excludedMovementTags.length)warnings.push({path:'constraints',code:'managed_without_exclusions',message:'Des problèmes sont signalés mais aucun mouvement/exercice n’est explicitement exclu. Le moteur ne devine pas les contre-indications.'});

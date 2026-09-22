@@ -1,0 +1,32 @@
+MUSCU COACH PRO — Objectif / calories / cycle V3
+
+Modifications principales
+- La durée du cycle n'est plus choisie manuellement.
+- Si une date cible est renseignée, le nombre de semaines est calculé automatiquement entre la date de début et la date cible.
+- Sans date cible, la durée est dérivée du poids à prendre et du rythme choisi.
+- Exemple de contrôle : 22/09/2026 -> 01/12/2026 = 10 semaines.
+
+Nutrition
+- L'activité quotidienne est maintenant explicitement HORS entraînement.
+- Les séances de musculation sont ajoutées séparément à l'estimation de dépense afin d'éviter le double comptage.
+- La cible calorique tient compte du poids cible ET de l'échéance.
+- Exemple de contrôle (70 kg, 183 cm, 32 ans, homme, activité hors entraînement modérée, 6 x 75 min, objectif 85 kg au 01/12/2026) :
+  dépense estimée ≈ 2450 kcal/j ; rythme demandé 1,50 kg/semaine ; surplus théorique ≈ 1650 kcal/j ; cible de départ ≈ 4100 kcal/j.
+- Une échéance extrêmement agressive est signalée clairement : le calcul représente une trajectoire mathématique de poids total, pas une promesse de masse musculaire.
+- La dépense est affichée avec ≈ au lieu de donner une fausse précision à la calorie près.
+
+Accueil
+- Nouvelle carte Mon objectif : poids de départ -> cible, poids actuel, kg gagnés, kg restants, pourcentage de progression, rythme observé, date cible et état de trajectoire.
+- La carte évolue quand le poids actuel est modifié.
+- Les compteurs du cycle utilisent désormais la vraie durée du programme au lieu de /20 en dur.
+
+Onboarding / profil
+- "Activité quotidienne globale" devient "Activité quotidienne hors entraînement".
+- Suppression du mélange "Travail physique / très gros volume" avec le volume d'entraînement.
+- Les contraintes sont reformulées en question compréhensible : blessure, douleur ou limitation actuelle ?
+- Les réglages du Coach recalculent objectif + durée + nutrition ensemble.
+
+Validation
+- npm run build : OK
+- Syntaxe JS : OK
+- Générateur testé sur 70 -> 85 kg, 22/09 -> 01/12 : programme généré sur 10 semaines, avertissement d'échéance très agressive.
