@@ -5,7 +5,7 @@ const program=[
   E('Développé militaire',3,'6–10',2,'principal'), E('Élévations latérales',4,'12–20',1.5), E('Reverse pec-deck',3,'15–20',1.5)
  ]},
  {day:'Mardi',name:'Jambes A',focus:'Quadriceps / lourd', ex:[
-  E('Squat / Hack squat',4,'6–8',2,'principal'),E('Presse à cuisses',3,'8–12',2),E('Fentes bulgares',3,'8–12 / jambe',2),
+  E('Squat',4,'6–8',2,'principal'),E('Presse à cuisses',3,'8–12',2),E('Fentes bulgares',3,'8–12 / jambe',2),
   E('Leg extension',3,'12–15',1.5),E('Leg curl',3,'10–15',1.5),E('Mollets',4,'10–15',1.5)
  ]},
  {day:'Mercredi',name:'Dos + bras A',focus:'Lourd / tension', ex:[
@@ -17,8 +17,8 @@ const program=[
  ]},
  {day:'Jeudi',name:'Pectoraux + épaules B',focus:'Volume / congestion', ex:[
   E('Développé incliné haltères',3,'8–12',2),E('Développé couché haltères',3,'8–12',2),
-  E('Chest press déclinée / dips',3,'8–12',1.5),E('Écartés poulie haute → basse',3,'12–15',1.5),
-  E('Élévations latérales haltères',4,'12–20',1.5),E('Élévations latérales poulie',3,'12–20',1.5),E('Reverse pec-deck',3,'15–20',1.5)
+  E('Chest press déclinée',3,'8–12',1.5),E('Écartés poulie basse',3,'12–15',1.5),
+  E('Élévations latérales',4,'12–20',1.5),E('Élévations latérales poulie',3,'12–20',1.5),E('Reverse pec-deck',3,'15–20',1.5)
  ]},
  {day:'Vendredi',name:'Jambes B',focus:'Chaîne postérieure / volume', ex:[
   E('Soulevé de terre roumain',4,'6–10',2,'principal'),E('Hack squat',3,'8–12',2),E('Hip thrust',3,'8–12',2),
@@ -36,7 +36,15 @@ function E(name,sets,reps,rir,tag=''){return {name,sets,reps,rir,tag}}
 const EXERCISE_NAME_ALIASES={
   'soulever de terre roumain':'Soulevé de terre roumain',
   'leg curl machine':'Leg curl',
-  'leg curl assis':'Leg curl'
+  'leg curl assis':'Leg curl',
+  'squat / hack squat':'Squat',
+  'chest press declinee / dips':'Chest press déclinée',
+  'ecartes poulie vis-a-vis':'Écartés poulie',
+  'ecartes poulie basse → haute':'Écartés poulie basse',
+  'ecartes poulie haute → basse':'Écartés poulie basse',
+  'ecartes poulie basse vers haute':'Écartés poulie basse',
+  'ecartes poulie haute vers basse':'Écartés poulie basse',
+  'elevations laterales halteres':'Élévations latérales'
 };
 function normalizedExerciseName(name){return String(name||'').trim().replace(/\s+/g,' ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('fr')}
 function canonicalExerciseName(name){const clean=String(name||'').trim().replace(/\s+/g,' '),alias=EXERCISE_NAME_ALIASES[normalizedExerciseName(clean)];return alias||clean}
@@ -65,9 +73,8 @@ const EXERCISE_CATALOG=[
   {name:"Pec deck",group:"Pectoraux",equipment:"Machine"},
   {name:"Écartés haltères couché",group:"Pectoraux",equipment:"Haltères"},
   {name:"Écartés haltères incliné",group:"Pectoraux",equipment:"Haltères"},
-  {name:"Écartés poulie vis-à-vis",group:"Pectoraux",equipment:"Poulie"},
-  {name:"Écartés poulie basse → haute",group:"Pectoraux",equipment:"Poulie"},
-  {name:"Écartés poulie haute → basse",group:"Pectoraux",equipment:"Poulie"},
+  {name:"Écartés poulie",group:"Pectoraux",equipment:"Poulie"},
+  {name:"Écartés poulie basse",group:"Pectoraux",equipment:"Poulie"},
   {name:"Press autour du corps à la poulie",group:"Pectoraux",equipment:"Poulie"},
   {name:"Svend press",group:"Pectoraux",equipment:"Disque / haltère"},
   {name:"Tractions pronation",group:"Dos",equipment:"Poids du corps / lest"},
@@ -106,7 +113,6 @@ const EXERCISE_CATALOG=[
   {name:"Arnold press",group:"Épaules",equipment:"Haltères"},
   {name:"Landmine press unilatéral",group:"Épaules",equipment:"Landmine"},
   {name:"Élévations latérales",group:"Épaules",equipment:"Haltères"},
-  {name:"Élévations latérales haltères",group:"Épaules",equipment:"Haltères"},
   {name:"Élévations latérales poulie",group:"Épaules",equipment:"Poulie"},
   {name:"Élévations latérales machine",group:"Épaules",equipment:"Machine"},
   {name:"Élévations latérales unilatérales",group:"Épaules",equipment:"Haltère / poulie"},
@@ -158,7 +164,7 @@ const EXERCISE_CATALOG=[
   {name:"Squat low bar",group:"Quadriceps",equipment:"Barre"},
   {name:"Squat Smith",group:"Quadriceps",equipment:"Smith machine"},
   {name:"Hack squat",group:"Quadriceps",equipment:"Machine"},
-  {name:"Squat / Hack squat",group:"Quadriceps",equipment:"Barre / machine"},
+  {name:"Squat",group:"Quadriceps",equipment:"Barre"},
   {name:"Pendulum squat",group:"Quadriceps",equipment:"Machine"},
   {name:"Belt squat",group:"Quadriceps",equipment:"Machine"},
   {name:"Goblet squat",group:"Quadriceps",equipment:"Haltère / kettlebell"},
@@ -273,7 +279,16 @@ if(!s.workLoads||typeof s.workLoads!=='object'||!Object.entries(s.workLoads).eve
 if(!Array.isArray(s.history)||!s.history.every(h=>validName(h.name)&&Number.isFinite(Date.parse(h.date))&&Array.isArray(h.sets)&&h.sets.every(x=>validName(x.name)&&num(x.load,0,2000)&&num(x.reps,1,100)&&num(x.rir??0,0,5))))throw Error('Historique invalide');
 s.tests=s.tests.map(t=>({...t,id:String(t.id||uid())}));s.history=s.history.map(h=>({...h,id:String(h.id||uid()),duration:num(h.duration,0,864000)?h.duration:0,sets:h.sets.map(x=>({...x,exerciseId:exerciseStableId(x.name,s.customExercises),name:canonicalExerciseName(x.name)})),exercises:Array.isArray(h.exercises)?h.exercises.map(x=>({...x,exerciseId:exerciseStableId(x.name,s.customExercises),name:canonicalExerciseName(x.name)})):h.exercises}));
 if(s.draft){const d=s.draft;if(!Number.isInteger(d.day)||d.day<0||d.day>6||!Number.isFinite(d.started)||!Array.isArray(d.exercises)||!d.exercises.length||!d.exercises.every(e=>validName(e.name)&&Array.isArray(e.sets)&&e.sets.every(x=>num(x.load,0,2000)&&num(x.reps,0,100)&&num(x.rir,0,5))))throw Error('Séance en cours invalide');d.exercises=d.exercises.map(e=>({...e,exerciseId:exerciseStableId(e.name,s.customExercises),name:canonicalExerciseName(e.name)}));d.index=clamp(d.index||0,0,d.exercises.length-1);d.templateDay=Number.isInteger(d.templateDay)&&d.templateDay>=0&&d.templateDay<=5?d.templateDay:(d.day<6?d.day:0)}s.exerciseNotes=s.exerciseNotes||{};if(typeof s.exerciseNotes!=='object'||Array.isArray(s.exerciseNotes)||!Object.entries(s.exerciseNotes).every(([n,v])=>validName(n)&&typeof v==='string'&&v.length<=1000))throw Error('Notes invalides');s.dayOverrides=s.dayOverrides&&typeof s.dayOverrides==='object'&&!Array.isArray(s.dayOverrides)?s.dayOverrides:{};for(const wk of Object.keys(s.dayOverrides)){const map=s.dayOverrides[wk];if(!map||typeof map!=='object'||Array.isArray(map)||!num(Number(wk),0,20)||!Object.entries(map).every(([d,t])=>num(Number(d),0,6)&&(t==='rest'||num(t,0,5)))){delete s.dayOverrides[wk];continue}}
-s.customExercises=Array.isArray(s.customExercises)?s.customExercises.filter(x=>x&&typeof x==='object'&&validName(x.name)&&validName(x.group||'Autres')&&typeof (x.equipment||'')==='string'&&(x.equipment||'').length<100).map(x=>({id:String(x.id||uid()),name:String(x.name).trim(),group:String(x.group||'Autres').trim(),equipment:String(x.equipment||'').trim()})):[];const seenCustom=new Set();s.customExercises=s.customExercises.filter(x=>{const k=normalizedExerciseName(canonicalExerciseName(x.name));if(seenCustom.has(k))return false;seenCustom.add(k);return true});s.tests=s.tests.map(t=>({...t,ex:canonicalExerciseName(t.ex),exerciseId:exerciseStableId(t.ex,s.customExercises)}));const normalizedNotes={};for(const [name,note] of Object.entries(s.exerciseNotes||{}))normalizedNotes[canonicalExerciseName(name)]=note;s.exerciseNotes=normalizedNotes;s.workLoadsByExerciseId=s.workLoadsByExerciseId&&typeof s.workLoadsByExerciseId==='object'&&!Array.isArray(s.workLoadsByExerciseId)?s.workLoadsByExerciseId:{};const genericLegCurlId=exerciseStableId('Leg curl',s.customExercises);for(const legacyId of ['exercise:leg_curl_assis','exercise:leg_curl_machine']){if(Object.hasOwn(s.workLoadsByExerciseId,legacyId)&&!Object.hasOwn(s.workLoadsByExerciseId,genericLegCurlId))s.workLoadsByExerciseId[genericLegCurlId]=s.workLoadsByExerciseId[legacyId];delete s.workLoadsByExerciseId[legacyId]}for(const [name,load] of Object.entries(s.workLoads||{})){const id=exerciseStableId(name,s.customExercises);if(!Object.hasOwn(s.workLoadsByExerciseId,id))s.workLoadsByExerciseId[id]=load}if(!Object.entries(s.workLoadsByExerciseId).every(([k,v])=>typeof k==='string'&&k.length>0&&num(v,0,2000)))throw Error('Charges par exercice invalides');s.planOverrides=s.planOverrides&&typeof s.planOverrides==='object'&&!Array.isArray(s.planOverrides)?s.planOverrides:{};const validPlanExercise=e=>e&&typeof e==='object'&&validName(e.name)&&Array.isArray(e.sets)&&e.sets.length>=1&&e.sets.length<=12&&typeof e.reps==='string'&&e.reps.length>0&&e.reps.length<40&&num(e.rir,0,5)&&num(e.rest,15,900)&&e.sets.every(x=>x&&typeof x==='object'&&(x.load==null||num(x.load,0,2000))&&num(x.reps,0,100)&&num(x.rir,0,5)&&num(x.min??x.reps,0,100)&&num(x.max??x.reps,0,100));for(const wk of Object.keys(s.planOverrides)){const map=s.planOverrides[wk];if(!map||typeof map!=='object'||Array.isArray(map)||!num(Number(wk),0,20)){delete s.planOverrides[wk];continue}for(const day of Object.keys(map)){const list=map[day];if(!num(Number(day),0,6)||!Array.isArray(list)||!list.length||list.length>30||!list.every(validPlanExercise)){delete map[day];continue}map[day]=list.map(e=>({...e,exerciseId:exerciseStableId(e.name,s.customExercises),name:canonicalExerciseName(e.name),loadMode:e.loadMode==='manual'?'manual':(e.plannedCustom&&e.load!=null?'manual':'auto'),sets:e.sets.map(x=>{const y={...x};delete y.done;return y})}))}if(!Object.keys(map).length)delete s.planOverrides[wk]}s.schema=3;return s;}
+s.customExercises=Array.isArray(s.customExercises)?s.customExercises.filter(x=>x&&typeof x==='object'&&validName(x.name)&&validName(x.group||'Autres')&&typeof (x.equipment||'')==='string'&&(x.equipment||'').length<100).map(x=>({id:String(x.id||uid()),name:String(x.name).trim(),group:String(x.group||'Autres').trim(),equipment:String(x.equipment||'').trim()})):[];const seenCustom=new Set();s.customExercises=s.customExercises.filter(x=>{const k=normalizedExerciseName(canonicalExerciseName(x.name));if(seenCustom.has(k))return false;seenCustom.add(k);return true});s.tests=s.tests.map(t=>({...t,ex:canonicalExerciseName(t.ex),exerciseId:exerciseStableId(t.ex,s.customExercises)}));const normalizedNotes={};for(const [name,note] of Object.entries(s.exerciseNotes||{}))normalizedNotes[canonicalExerciseName(name)]=note;s.exerciseNotes=normalizedNotes;s.workLoadsByExerciseId=s.workLoadsByExerciseId&&typeof s.workLoadsByExerciseId==='object'&&!Array.isArray(s.workLoadsByExerciseId)?s.workLoadsByExerciseId:{};const legacyExerciseIds={
+'exercise:leg_curl_assis':'Leg curl',
+'exercise:leg_curl_machine':'Leg curl',
+'exercise:squat_hack_squat':'Squat',
+'exercise:chest_press_declinee_dips':'Chest press déclinée',
+'exercise:ecartes_poulie_vis_a_vis':'Écartés poulie',
+'exercise:ecartes_poulie_basse_haute':'Écartés poulie basse',
+'exercise:ecartes_poulie_haute_basse':'Écartés poulie basse',
+'exercise:elevations_laterales_halteres':'Élévations latérales'
+};for(const [legacyId,targetName] of Object.entries(legacyExerciseIds)){const targetId=exerciseStableId(targetName,s.customExercises);if(Object.hasOwn(s.workLoadsByExerciseId,legacyId)&&!Object.hasOwn(s.workLoadsByExerciseId,targetId))s.workLoadsByExerciseId[targetId]=s.workLoadsByExerciseId[legacyId];delete s.workLoadsByExerciseId[legacyId]}for(const [name,load] of Object.entries(s.workLoads||{})){const canonical=canonicalExerciseName(name),id=exerciseStableId(canonical,s.customExercises);if(!Object.hasOwn(s.workLoadsByExerciseId,id))s.workLoadsByExerciseId[id]=load;if(canonical!==name){delete s.workLoads[name];if(!Object.hasOwn(s.workLoads,canonical))s.workLoads[canonical]=load}}if(!Object.entries(s.workLoadsByExerciseId).every(([k,v])=>typeof k==='string'&&k.length>0&&num(v,0,2000)))throw Error('Charges par exercice invalides');s.planOverrides=s.planOverrides&&typeof s.planOverrides==='object'&&!Array.isArray(s.planOverrides)?s.planOverrides:{};const validPlanExercise=e=>e&&typeof e==='object'&&validName(e.name)&&Array.isArray(e.sets)&&e.sets.length>=1&&e.sets.length<=12&&typeof e.reps==='string'&&e.reps.length>0&&e.reps.length<40&&num(e.rir,0,5)&&num(e.rest,15,900)&&e.sets.every(x=>x&&typeof x==='object'&&(x.load==null||num(x.load,0,2000))&&num(x.reps,0,100)&&num(x.rir,0,5)&&num(x.min??x.reps,0,100)&&num(x.max??x.reps,0,100));for(const wk of Object.keys(s.planOverrides)){const map=s.planOverrides[wk];if(!map||typeof map!=='object'||Array.isArray(map)||!num(Number(wk),0,20)){delete s.planOverrides[wk];continue}for(const day of Object.keys(map)){const list=map[day];if(!num(Number(day),0,6)||!Array.isArray(list)||!list.length||list.length>30||!list.every(validPlanExercise)){delete map[day];continue}map[day]=list.map(e=>({...e,exerciseId:exerciseStableId(e.name,s.customExercises),name:canonicalExerciseName(e.name),loadMode:e.loadMode==='manual'?'manual':(e.plannedCustom&&e.load!=null?'manual':'auto'),sets:e.sets.map(x=>{const y={...x};delete y.done;return y})}))}if(!Object.keys(map).length)delete s.planOverrides[wk]}s.schema=3;return s;}
 function loadState(){try{let x=localStorage.getItem(KEY)||localStorage.getItem('muscu-coach-v2');return x?normalise(JSON.parse(x)):clone(BASELINE)}catch{return clone(BASELINE)}}
 let state=loadState(),tab='home',selectedDay=todayPlanDay(),selectionMode='auto',calendarKey=localDate(),previewWeek=state.profile.week||1,programMode='sessions',progressMode='overview',chartExercise='Développé couché',lastFocus=null,toastTimeout=null,audioCtx=null,wakeLock=null,planEditContext=null;
 function save(){state.savedAt=new Date().toISOString();try{localStorage.setItem(KEY,JSON.stringify(state));storageError=false;return true}catch{storageError=true;toast('Sauvegarde indisponible. Exporte tes données pour les conserver.');return false}}
@@ -281,7 +296,7 @@ const phase=(w=state.profile.week)=>PHASES.find(p=>w>=p.from&&w<=p.to)||PHASES[0
 const repRange=s=>{const a=String(s).match(/\d+/g)||[8];return {min:+a[0],max:+(a[1]||a[0])}};
 const round=(n,inc)=>Math.round(n/inc)*inc;
 function increment(name){if(/haltère|bulgare|marteau|incliné$|Rowing unilatéral$/.test(name))return /Élévation/.test(name)?1:2;if(/presse|Chest press|Hack|Leg |Mollet|Rowing machine|pec-deck/i.test(name))return 5;if(/poulie|corde/.test(name))return 1.25;return 2.5}
-function refName(name){if(name==='Squat / Hack squat')return latestTest('Squat')?'Squat':'Hack squat';return name}
+function refName(name){return canonicalExerciseName(name)}
 function latestTest(name){const id=exerciseStableId(name);return [...state.tests].reverse().filter(t=>(t.exerciseId||exerciseStableId(t.ex))===id).sort((a,b)=>(b.date?Date.parse(b.date):0)-(a.date?Date.parse(a.date):0))[0]}
 function e1rm(t){if(!t)return 0;const isWeightedPullup=(t.exerciseId||exerciseStableId(t.ex))===exerciseStableId('Tractions lestées'),total=t.load+(isWeightedPullup?(t.bw||state.profile.weight):0);return total*(1+t.reps/30)}
 function lastSets(name){const id=exerciseStableId(name);for(const h of [...state.history].reverse()){const s=h.sets.filter(x=>(x.exerciseId||exerciseStableId(x.name))===id);if(s.length)return s}return []}
