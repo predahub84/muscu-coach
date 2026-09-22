@@ -236,7 +236,12 @@
         }
         setBusy(false);
         emailForm.reset();
-        setFeedback('Compte créé. Vérifie ta boîte mail pour confirmer ton adresse, puis tu pourras ouvrir ton carnet.','success');
+        const identities=Array.isArray(data?.user?.identities)?data.user.identities:null;
+        if(identities&&identities.length===0){
+          setFeedback('Si cette adresse est déjà liée à un compte (par exemple via Google), aucun nouveau compte ni nouvel e-mail de confirmation ne sont créés. Essaie « J’ai déjà un compte » ou « Continuer avec Google ».','info');
+        }else{
+          setFeedback('Compte créé. Vérifie ta boîte mail pour confirmer ton adresse, puis tu pourras ouvrir ton carnet.','success');
+        }
         return;
       }
 

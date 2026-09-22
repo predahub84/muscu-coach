@@ -49,7 +49,30 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 window.addEventListener('storage',ev=>{if(cloud.user&&ev.key===accountKey(cloud.user.id)){shield('Carnet ouvert dans un autre onglet.','Recharge cette page pour reprendre la dernière copie enregistrée.',true)}});
 async function initCloud(){{try{const last=JSON.parse(localStorage.getItem(LAST_ACCOUNT)||'null');if(last&&localStorage.getItem(accountKey(last.id)))attachSession({user:last})}catch{}}const cfg=window.COACH_CONFIG||{};if(!cfg.supabaseUrl||!cfg.supabasePublishableKey){render();return}try{cloud.client=window.SupabaseSDK.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,flowType:'pkce'},global:{fetch:(url,options={})=>fetch(url,{...options,signal:options.signal||AbortSignal.timeout(15000)})}});cloud.client.auth.onAuthStateChange((event,session)=>{setTimeout(()=>{if(!session&&!navigator.onLine)return;attachSession(session);},0)});cloudStatus('connecting');const {data,error}=await cloud.client.auth.getSession();if(error)throw error;if(data.session||navigator.onLine)attachSession(data.session);if(!data.session&&!cloud.user)cloudStatus('local');render();}catch{cloudStatus('error');render()}}
 const initializeAccount=initCloud;
-initCloud=async function(){const cfg=window.COACH_CONFIG||{};if(cfg.supabaseUrl&&cfg.supabasePublishableKey)shield('Retrouver ton carnet.', 'Vérification du compte et de la copie sur cet appareil…');try{await initializeAccount()}finally{if(!cloud.cacheError){let guest=false;try{if(new URL(location.href).searchParams.get('mode')==='local')sessionStorage.setItem('coach-guest','1');guest=sessionStorage.getItem('coach-guest')==='1'}catch{}if(!cloud.user&&!guest){location.replace('/accueil.html');return}document.body.classList.remove('entry-check');unshield()}}};
+initCloud=async function(){
+ const cfg=window.COACH_CONFIG||{};
+ if(cfg.supabaseUrl&&cfg.supabasePublishableKey)shield('Retrouver ton carnet.', 'Vérification du compte et de ton profil…');
+ try{
+  await initializeAccount();
+  // Avant d'afficher le carnet, on sait si ce compte possède déjà un profil
+  // relationnel. Un compte neuf reste donc bloqué sur l'onboarding et ne peut
+  // jamais tomber sur le programme historique par défaut.
+  if(cloud.user&&navigator.onLine){
+   cloud.coachingSynced=false;
+   await syncCoachRelational(true);
+   if(cloud.box){cloud.box.state=clone(state);storeBox();}
+   render();
+  }
+ }finally{
+  if(!cloud.cacheError){
+   let guest=false;
+   try{if(new URL(location.href).searchParams.get('mode')==='local')sessionStorage.setItem('coach-guest','1');guest=sessionStorage.getItem('coach-guest')==='1'}catch{}
+   if(!cloud.user&&!guest){location.replace('/accueil.html');return}
+   document.body.classList.remove('entry-check');
+   unshield();
+  }
+ }
+};
 window.MuscuCoachCloudAPI=Object.freeze({isSignedIn:()=>!!cloud.user?.id,getUserId:()=>cloud.user?.id||null,isRelationalReady:()=>!!(cloud.user?.id&&cloud.client&&window.MuscuCoachStorage?.isRemoteBound()),syncCoaching:()=>syncCoachRelational(true)});
 // Only one editable tab avoids two local writers replacing a pending envelope.
 async function bootCloud(){if(navigator.locks){navigator.locks.request('muscu-coach-editor',{ifAvailable:true},async lock=>{if(!lock){shield('Déjà ouvert dans un autre onglet.','Ferme l’autre onglet Muscu Coach puis recharge celui-ci.',true);return}await initCloud();await new Promise(()=>{});}).catch(()=>shield('Ouverture interrompue.','Recharge l’app pour reprendre.',true))}else await initCloud();}
