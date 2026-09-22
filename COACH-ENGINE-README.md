@@ -56,3 +56,17 @@ await MuscuCoachCloudAPI.syncCoaching();
 ## Étape suivante
 
 Construire l'écran d'onboarding/génération : profil, objectif, poids cible, rythme de prise de masse, disponibilité, priorités musculaires et contraintes, puis appliquer le programme généré à l'interface Programme/Séance.
+
+## Onboarding + profil + nutrition V1
+
+Les nouveaux comptes authentifiés sans profil passent maintenant par un onboarding obligatoire avant d'accéder au carnet. Le formulaire initialise :
+- le profil physique/sportif ;
+- l'objectif actif ;
+- le programme généré ;
+- les objectifs nutritionnels journaliers ;
+- l'état local du carnet.
+
+Migration Supabase additionnelle à exécuter une seule fois : `supabase-profile-nutrition-v1.sql`.
+Elle crée `coach_profiles`, `coach_goals`, `coach_nutrition_targets` et `coach_checkins`, avec RLS par `user_id`.
+
+Les comptes existants contenant déjà un historique, des références, des charges ou un programme sont considérés comme comptes legacy et ne sont pas bloqués par le nouvel onboarding. Leur profil complet pourra être enrichi séparément sans effacer leur carnet.
